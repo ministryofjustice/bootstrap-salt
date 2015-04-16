@@ -134,7 +134,7 @@ def install_master(stack_id):
     stack_public_ips.remove(master_public_ip)
     env.host_string = 'ubuntu@%s' % master_public_ip
     sha = '6080a18e6c7c2d49335978fa69fa63645b45bc2a'
-    sudo('wget https://raw.githubusercontent.com/ministryofjustice/bootstrap-cfn/master/scripts/bootstrap-salt.sh -O /tmp/moj-bootstrap.sh')
+    sudo('wget https://raw.githubusercontent.com/ministryofjustice/bootstrap-salt/master/scripts/bootstrap-salt.sh -O /tmp/moj-bootstrap.sh')
     sudo('chmod 755 /tmp/moj-bootstrap.sh')
     sudo('/tmp/moj-bootstrap.sh')
     sudo(
