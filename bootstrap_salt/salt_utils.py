@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-from bootstrap_cfn import utils
-from bootstrap_cfn import errors
+import utils
+import errors
 import salt
 import salt.runner
 import salt.client

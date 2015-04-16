@@ -8,8 +8,6 @@ import yaml
 
 from fabric.api import env, task, sudo, put
 from fabric.contrib.project import upload_project
-
-# from bootstrap_salt.config import ProjectConfig, ConfigParser
 from cloudformation import Cloudformation
 from ec2 import EC2
 
@@ -24,13 +22,27 @@ path = env.real_fabfile or os.getcwd()
 sys.path.append(os.path.dirname(path))
 
 
+env.stack = None
+
 @task
 def aws(x):
     env.aws = str(x).lower()
 
 @task
-def stack(x):
-    env.stack = str(x).lower()
+def setup(stack_name=None):
+    if stack_name:
+        env.stack = stack_name
+
+    if env.stack is None:
+        if env.application is None or env.environment is None:
+            print "\n[ERROR] Please specify a stack_id, e.g 'stack:<stack_id>'"
+            sys.exit(1)
+        else:
+            env.stack = "{0}-{1}".format(env.application, env.environment)
+
+    # Setup
+    install_master()
+    install_minions()
 
 
 def _validate_fabric_env():
@@ -47,23 +59,12 @@ def get_connection(klass):
     return klass(env.aws, env.aws_region)
 
 
-@task
 def find_master():
     stack_name = env.stack
     ec2 = get_connection(EC2)
     master = ec2.get_master_instance(stack_name).ip_address
     print 'Salt master public address: {0}'.format(master)
     return master
-
-@task
-def setup_salt():
-    if env.stack is None:
-        print "\n[ERROR] Please specify a stack_id, e.g 'stack:<stack_id>'"
-        sys.exit(1)
-
-    # Setup
-    install_master()
-    install_minions()
 
 
 def get_candidate_minions():
@@ -76,7 +77,6 @@ def get_candidate_minions():
     return instance_ids
 
 
-@task
 def install_minions():
     stack_name = env.stack
     ec2 = get_connection(EC2)
@@ -108,7 +108,6 @@ def install_minions():
         sudo('salt-key -y -A')
 
 
-@task
 def install_master():
     stack_name = env.stack
     ec2 = get_connection(EC2)
@@ -140,58 +139,58 @@ def install_master():
         '/tmp/bootstrap-salt.sh -M -A `cat /etc/tags/SaltMasterPrvIP` git v2014.1.4')
     sudo('salt-key -y -A')
 
-# @task
-# def rsync(stack_id):
-#
-#     _validate_fabric_env()
-#
-#     work_dir = os.path.dirname(env.real_fabfile)
-#
-#     project_config = ProjectConfig(env.config, env.environment, env.stack_passwords)
-#     stack_name = env.stack
-#     cfg = project_config.config
-#     salt_cfg = cfg.get('salt', {})
-#
-#     local_salt_dir = os.path.join(
-#         work_dir,
-#         salt_cfg.get('local_salt_dir', 'salt'),
-#         '.')
-#     local_pillar_dir = os.path.join(
-#         work_dir,
-#         salt_cfg.get('local_pillar_dir', 'pillar'),
-#         '.')
-#     local_vendor_dir = os.path.join(
-#         work_dir,
-#         salt_cfg.get('local_vendor_dir', 'vendor'),
-#         '.')
-#
-#     remote_state_dir = salt_cfg.get('remote_state_dir', '/srv/salt')
-#     remote_pillar_dir = salt_cfg.get('remote_pillar_dir', '/srv/pillar')
-#
-#     master_ip = find_master()
-#     env.host_string = '{0}@{1}'.format(env.user, master_ip)
-#     sudo('mkdir -p {0}'.format(remote_state_dir))
-#     sudo('mkdir -p {0}'.format(remote_pillar_dir))
-#     upload_project(
-#         remote_dir=remote_state_dir,
-#         local_dir=os.path.join(local_vendor_dir, '_root', '.'),
-#         use_sudo=True)
-#     upload_project(
-#         remote_dir='/srv/',
-#         local_dir=os.path.join(local_vendor_dir, 'formula-repos'),
-#         use_sudo=True)
-#     upload_project(
-#         remote_dir=remote_state_dir,
-#         local_dir=local_salt_dir,
-#         use_sudo=True)
-#     upload_project(
-#         remote_dir=remote_pillar_dir,
-#         local_dir=os.path.join(local_pillar_dir, env.environment, '.'),
-#         use_sudo=True)
-#     cf_sls = StringIO(yaml.dump(cfg))
-#     put(
-#         remote_path=os.path.join(
-#             remote_pillar_dir,
-#             'cloudformation.sls'),
-#         local_path=cf_sls,
-#         use_sudo=True)
+@task
+def rsync(stack_id):
+
+    _validate_fabric_env()
+
+    work_dir = os.path.dirname(env.real_fabfile)
+
+    project_config = ProjectConfig(env.config, env.environment, env.stack_passwords)
+    stack_name = env.stack
+    cfg = project_config.config
+    salt_cfg = cfg.get('salt', {})
+
+    local_salt_dir = os.path.join(
+        work_dir,
+        salt_cfg.get('local_salt_dir', 'salt'),
+        '.')
+    local_pillar_dir = os.path.join(
+        work_dir,
+        salt_cfg.get('local_pillar_dir', 'pillar'),
+        '.')
+    local_vendor_dir = os.path.join(
+        work_dir,
+        salt_cfg.get('local_vendor_dir', 'vendor'),
+        '.')
+
+    remote_state_dir = salt_cfg.get('remote_state_dir', '/srv/salt')
+    remote_pillar_dir = salt_cfg.get('remote_pillar_dir', '/srv/pillar')
+
+    master_ip = find_master()
+    env.host_string = '{0}@{1}'.format(env.user, master_ip)
+    sudo('mkdir -p {0}'.format(remote_state_dir))
+    sudo('mkdir -p {0}'.format(remote_pillar_dir))
+    upload_project(
+        remote_dir=remote_state_dir,
+        local_dir=os.path.join(local_vendor_dir, '_root', '.'),
+        use_sudo=True)
+    upload_project(
+        remote_dir='/srv/',
+        local_dir=os.path.join(local_vendor_dir, 'formula-repos'),
+        use_sudo=True)
+    upload_project(
+        remote_dir=remote_state_dir,
+        local_dir=local_salt_dir,
+        use_sudo=True)
+    upload_project(
+        remote_dir=remote_pillar_dir,
+        local_dir=os.path.join(local_pillar_dir, env.environment, '.'),
+        use_sudo=True)
+    cf_sls = StringIO(yaml.dump(cfg))
+    put(
+        remote_path=os.path.join(
+            remote_pillar_dir,
+            'cloudformation.sls'),
+        local_path=cf_sls,
+        use_sudo=True)

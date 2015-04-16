@@ -4,7 +4,7 @@ from boto.ec2 import autoscale
 import utils
 
 
-class Cloudformation:
+class Cloudformation(object):
 
     conn_cfn = None
     aws_region_name = None
