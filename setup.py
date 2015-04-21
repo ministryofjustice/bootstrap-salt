@@ -3,9 +3,9 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='bootstrap_salt',
+    name='bootstrap-salt',
     version='0.0.1',
-    url='http://github.com/ministryofjustice/bootstrap_salt/',
+    url='http://github.com/ministryofjustice/bootstrap-salt/',
     license='LICENSE',
     author='MOJDS',
     author_email='tools@digital.justice.gov.uk',
