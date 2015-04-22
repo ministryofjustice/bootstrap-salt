@@ -11,6 +11,7 @@ from fabric.contrib.project import upload_project
 from cloudformation import Cloudformation
 from ec2 import EC2
 import bootstrap_cfn.config as config
+from bootstrap_cfn.fab_tasks import _validate_fabric_env, get_stack_name
 
 # GLOBAL VARIABLES
 env.aws = None
@@ -29,30 +30,13 @@ env.stack = None
 def aws(x):
     env.aws = str(x).lower()
 
+
 @task
 def setup(stack_name=None):
-    if stack_name:
-        env.stack = stack_name
-
-    if env.stack is None:
-        if env.application is None or env.environment is None:
-            print "\n[ERROR] Please specify a stack_id, e.g 'stack:<stack_id>'"
-            sys.exit(1)
-        else:
-            env.stack = "{0}-{1}".format(env.application, env.environment)
-
-    # Setup
+    _validate_fabric_env()
+    env.stack = get_stack_name()
     install_master()
     install_minions()
-
-
-def _validate_fabric_env():
-    if env.aws is None:
-        print "\n[ERROR] Please specify an AWS account, e.g 'aws:dev'"
-        sys.exit(1)
-
-    if not hasattr(env, 'aws_region'):
-        env.aws_region = 'eu-west-1'
 
 
 def get_connection(klass):
@@ -79,7 +63,9 @@ def get_candidate_minions():
 
 
 def install_minions():
-    stack_name = env.stack
+    _validate_fabric_env()
+    stack_name = get_stack_name()
+    env.stack = stack_name
     ec2 = get_connection(EC2)
     print "Waiting for SSH on all instances..."
     ec2.wait_for_ssh(stack_name)
@@ -110,7 +96,9 @@ def install_minions():
 
 
 def install_master():
-    stack_name = env.stack
+    _validate_fabric_env()
+    stack_name = get_stack_name()
+    env.stack = stack_name
     ec2 = get_connection(EC2)
     cfn = get_connection(Cloudformation)
     print "Waiting for SSH on all instances..."
@@ -137,15 +125,20 @@ def install_master():
         sha)
     sudo('chmod 755 /tmp/bootstrap-salt.sh')
     sudo(
-        '/tmp/bootstrap-salt.sh -M -A `cat /etc/tags/SaltMasterPrvIP` git v2014.1.4')
+        '/tmp/bootstrap-salt.sh -M -A `cat /etc/tags/SaltMasterPrvIP`\
+         git v2014.1.4')
     sudo('salt-key -y -A')
 
 
 @task
 def rsync():
     _validate_fabric_env()
+    stack_name = get_stack_name()
+    env.stack = stack_name
     work_dir = os.path.dirname(env.real_fabfile)
-    project_config = config.ProjectConfig(env.config, env.environment, env.stack_passwords)
+    project_config = config.ProjectConfig(env.config,
+                                          env.environment,
+                                          env.stack_passwords)
     cfg = project_config.config
 
     salt_cfg = cfg.get('salt', {})
