@@ -5,12 +5,13 @@ import yaml
 import boto.cloudformation
 import boto.ec2.autoscale
 import paramiko
-from bootstrap_cfn import cloudformation
-from bootstrap_cfn import ec2
-from bootstrap_cfn import ssh
-from paramiko.ssh_exception import AuthenticationException, BadHostKeyException
-import os
+from bootstrap_salt import cloudformation
+from bootstrap_salt import ec2
+from bootstrap_salt import ssh
+from paramiko.ssh_exception import AuthenticationException
 import socket
+import os
+
 
 class BootstrapSaltTestCase(unittest.TestCase):
 
