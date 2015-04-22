@@ -10,6 +10,7 @@ from fabric.api import env, task, sudo, put
 from fabric.contrib.project import upload_project
 from cloudformation import Cloudformation
 from ec2 import EC2
+import bootstrap_cfn.config as config
 
 # GLOBAL VARIABLES
 env.aws = None
@@ -139,16 +140,14 @@ def install_master():
         '/tmp/bootstrap-salt.sh -M -A `cat /etc/tags/SaltMasterPrvIP` git v2014.1.4')
     sudo('salt-key -y -A')
 
+
 @task
-def rsync(stack_id):
-
+def rsync():
     _validate_fabric_env()
-
     work_dir = os.path.dirname(env.real_fabfile)
-
-    project_config = ProjectConfig(env.config, env.environment, env.stack_passwords)
-    stack_name = env.stack
+    project_config = config.ProjectConfig(env.config, env.environment, env.stack_passwords)
     cfg = project_config.config
+
     salt_cfg = cfg.get('salt', {})
 
     local_salt_dir = os.path.join(
