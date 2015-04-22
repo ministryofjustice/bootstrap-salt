@@ -1,14 +1,14 @@
 import unittest
 import mock
-from bootstrap_cfn import errors
-import os
+from bootstrap_salt import errors
 import sys
-#This is a hack so that we don't need salt to run our tests
+# This is a hack so that we don't need salt to run our tests
 sys.modules['salt'] = mock.Mock()
 sys.modules['salt.runner'] = mock.Mock()
 sys.modules['salt.client'] = mock.Mock()
 import salt
-from bootstrap_cfn import salt_utils
+from bootstrap_salt import salt_utils
+
 
 class SaltUtilTestCase(unittest.TestCase):
 
