@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='bootstrap-salt',
+    name='bootstrap_salt',
     version='0.0.1',
     url='http://github.com/ministryofjustice/bootstrap-salt/',
     license='LICENSE',
@@ -11,7 +11,7 @@ setup(
     author_email='tools@digital.justice.gov.uk',
     description='MOJDS salt bootstrap tool',
     long_description="",
-    packages=find_packages(),
+    packages=find_packages(exclude=["tests"]),
     zip_safe=False,
     platforms='any',
     test_suite='tests',
@@ -19,6 +19,9 @@ setup(
         'Fabric>=1.10.1',
         'PyYAML>=3.11',
         'boto>=2.36.0',
+        'bootstrap-cfn>=0.3.0',
+    ],
+    setup_requires=[
         'mock>=1.0.1',
         'testfixtures>=4.1.2',
     ],
