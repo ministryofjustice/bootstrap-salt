@@ -33,8 +33,6 @@ def aws(x):
 
 @task
 def setup(stack_name=None):
-    _validate_fabric_env()
-    env.stack = get_stack_name()
     install_master()
     install_minions()
 
@@ -45,15 +43,15 @@ def get_connection(klass):
 
 
 def find_master():
-    stack_name = env.stack
+    _validate_fabric_env()
+    stack_name = get_stack_name()
     ec2 = get_connection(EC2)
     master = ec2.get_master_instance(stack_name).ip_address
     print 'Salt master public address: {0}'.format(master)
     return master
 
 
-def get_candidate_minions():
-    stack_name = env.stack
+def get_candidate_minions(stack_name):
     cfn = get_connection(Cloudformation)
     ec2 = get_connection(EC2)
     instance_ids = cfn.get_stack_instance_ids(stack_name)
@@ -65,11 +63,10 @@ def get_candidate_minions():
 def install_minions():
     _validate_fabric_env()
     stack_name = get_stack_name()
-    env.stack = stack_name
     ec2 = get_connection(EC2)
     print "Waiting for SSH on all instances..."
     ec2.wait_for_ssh(stack_name)
-    candidates = get_candidate_minions()
+    candidates = get_candidate_minions(stack_name)
     existing_minions = ec2.get_minions(stack_name)
     to_install = list(set(candidates).difference(set(existing_minions)))
     if not to_install:
@@ -98,7 +95,6 @@ def install_minions():
 def install_master():
     _validate_fabric_env()
     stack_name = get_stack_name()
-    env.stack = stack_name
     ec2 = get_connection(EC2)
     cfn = get_connection(Cloudformation)
     print "Waiting for SSH on all instances..."
@@ -132,9 +128,6 @@ def install_master():
 
 @task
 def rsync():
-    _validate_fabric_env()
-    stack_name = get_stack_name()
-    env.stack = stack_name
     work_dir = os.path.dirname(env.real_fabfile)
     project_config = config.ProjectConfig(env.config,
                                           env.environment,
