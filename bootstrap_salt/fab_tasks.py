@@ -10,6 +10,7 @@ from fabric.api import env, task, sudo, put
 from fabric.contrib.project import upload_project
 from cloudformation import Cloudformation
 from ec2 import EC2
+from r53 import R53
 import bootstrap_cfn.config as config
 from bootstrap_cfn.fab_tasks import _validate_fabric_env, get_stack_name
 
@@ -50,6 +51,34 @@ def find_master():
     master = ec2.get_master_instance(stack_name).ip_address
     print 'Salt master public address: {0}'.format(master)
     return master
+
+
+def set_master_dns():
+    master_ip = find_master()
+    project_config = config.ProjectConfig(env.config,
+                                          env.environment,
+                                          env.stack_passwords)
+    cfg = project_config.config
+    zone_name = cfg['master_zone']
+    r53 = get_connection(R53)
+    zone_id = r53.get_hosted_zone_id(zone_name)
+    dns_name = 'master.{0}.{1}.{2}'.format(env.environment,
+                                           env.application,
+                                           zone_name)
+    r53.update_dns_record(zone_id, dns_name, 'A', master_ip)
+
+
+def get_master_name():
+    _validate_fabric_env()
+    project_config = config.ProjectConfig(env.config,
+                                          env.environment,
+                                          env.stack_passwords)
+    cfg = project_config.config
+    zone_name = cfg['master_zone']
+    dns_name = 'master.{0}.{1}.{2}'.format(env.environment,
+                                           env.application,
+                                           zone_name)
+    return dns_name
 
 
 def get_candidate_minions(stack_name):
@@ -114,6 +143,7 @@ def install_master():
     master_public_ip = ec2.get_instance_public_ips([master])[0]
     ec2.set_instance_tags(instance_ids, {'SaltMasterPrvIP': master_prv_ip})
     ec2.set_instance_tags(master, {'SaltMaster': 'True'})
+    set_master_dns()
 
     stack_ips = ec2.get_instance_private_ips(instance_ids)
     stack_ips.remove(master_prv_ip)
@@ -168,7 +198,7 @@ def rsync():
     remote_state_dir = salt_cfg.get('remote_state_dir', '/srv/salt')
     remote_pillar_dir = salt_cfg.get('remote_pillar_dir', '/srv/pillar')
 
-    master_ip = find_master()
+    master_ip = get_master_name()
     env.host_string = '{0}@{1}'.format(env.user, master_ip)
     sudo('mkdir -p {0}'.format(remote_state_dir))
     sudo('mkdir -p {0}'.format(remote_pillar_dir))
