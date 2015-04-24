@@ -128,6 +128,7 @@ def install_master():
 
 @task
 def rsync():
+    _validate_fabric_env()
     work_dir = os.path.dirname(env.real_fabfile)
     project_config = config.ProjectConfig(env.config,
                                           env.environment,
