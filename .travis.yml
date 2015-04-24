@@ -11,7 +11,7 @@ python:
 # command to install dependencies and run tests
 script:
   # Run the tests first, and if they pass look at for style guide problems.
-  - coverage run --source=bootstrap-salt setup.py test
+  - coverage run --source=bootstrap_salt setup.py test
 
   # If we are a Pull request, check the changes introduced in it for pep8
   #
