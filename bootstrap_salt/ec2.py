@@ -1,5 +1,6 @@
 import boto.ec2
 import cloudformation
+import errors
 import ssh
 import utils
 
@@ -52,38 +53,41 @@ class EC2:
         resv = self.conn_ec2.get_all_reservations([inst_id])
         return [i for r in resv for i in r.instances][0] if resv else None
 
-    def get_master_instance(self, stack_name_or_id, master_tag_name='SaltMaster'):
-        stack_instances = self.cfn.get_stack_instances(stack_name_or_id)
-        stack_instance_ids = [x.instance_id for x in stack_instances]
+    def get_master_instance(self, master_tag_name='SaltMaster'):
         filters = {'tag-key': master_tag_name,
-                   'instance-state-name': 'running',
-                   'instance-id': stack_instance_ids}
-        resv = self.conn_ec2.get_all_reservations(filters=filters)
-        return [i for r in resv for i in r.instances][0] if resv else None
+                   'instance-state-name': 'running'}
+
+        instances = self.conn_ec2.get_only_instances(None, filters=filters)
+
+        if len(instances) == 1:
+            return instances[0]
+        else:
+            raise errors.SaltNoMasterInstance('No master instance could be found')
 
     def get_minions(self, stack_name_or_id,
                     minion_tag_name='SaltMasterPrvIP', remove_master=False):
         resv = self.conn_ec2.get_all_reservations(
-            filters={ 'tag-key': minion_tag_name,
-                      'instance-id': self.cfn.get_stack_instances(stack_name_or_id)
-                    })
+            filters={'tag-key': minion_tag_name,
+                     'instance-id': self.cfn.get_stack_instances(stack_name_or_id)}
+        )
         instances = [i for r in resv for i in r.instances]
         if remove_master:
             instances.remove(self.get_master_instance(stack_name_or_id))
         return instances
 
-    def is_ssh_up_on_all_instances(self, stack_id):
+    def is_ssh_up_on_all_instances(self, instances):
         '''
         Returns False if no instances found
         Returns False if any instance is not available over SSH
         Returns True if all found instances available over SSH
         '''
-        instances = self.get_instance_public_ips(self.cfn.get_stack_instance_ids(stack_id))
+        instances = self.get_instance_public_ips(instances)
+
         if not instances:
             return False
         if all([ssh.is_ssh_up(i) for i in instances]):
             return True
         return False
 
-    def wait_for_ssh(self, stack_id, timeout=300, interval=30):
-        return utils.timeout(timeout, interval)(self.is_ssh_up_on_all_instances)(stack_id)
+    def wait_for_ssh(self, instances, timeout=300, interval=30):
+        return utils.timeout(timeout, interval)(self.is_ssh_up_on_all_instances)(instances)

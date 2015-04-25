@@ -3,14 +3,13 @@
 import os
 from StringIO import StringIO
 import sys
-import random
 import yaml
 
 from fabric.api import env, task, sudo, put
 from fabric.contrib.project import upload_project
 from cloudformation import Cloudformation
 from ec2 import EC2
-import bootstrap_cfn.config as config
+import bootstrap_cfn.config as cfn_config
 from bootstrap_cfn.fab_tasks import _validate_fabric_env, get_stack_name
 
 # GLOBAL VARIABLES
@@ -26,9 +25,25 @@ sys.path.append(os.path.dirname(path))
 
 env.stack = None
 
+
 @task
 def aws(x):
     env.aws = str(x).lower()
+
+
+@task
+def environment(x):
+    env.environment = str(x).lower()
+
+
+@task
+def application(x):
+    env.application = str(x).lower()
+
+
+@task
+def config(x):
+    env.config = str(x).lower()
 
 
 @task
@@ -42,41 +57,44 @@ def get_connection(klass):
     return klass(env.aws, env.aws_region)
 
 
+@task
 def find_master():
     _validate_fabric_env()
-    stack_name = get_stack_name()
     ec2 = get_connection(EC2)
-    master = ec2.get_master_instance(stack_name).ip_address
-    print 'Salt master public address: {0}'.format(master)
-    return master
+    master_ip = ec2.get_master_instance().ip_address
+    print 'Salt master public address: {0}'.format(master_ip)
+    return master_ip
 
 
 def get_candidate_minions(stack_name):
     cfn = get_connection(Cloudformation)
-    ec2 = get_connection(EC2)
-    instance_ids = cfn.get_stack_instance_ids(stack_name)
-    master_instance_id = ec2.get_master_instance(stack_name).id
-    instance_ids.remove(master_instance_id)
-    return instance_ids
+
+    return cfn.get_stack_instance_ids(stack_name)
 
 
+@task
 def install_minions():
     _validate_fabric_env()
+    add_master_ip_to_minions()
+
     stack_name = get_stack_name()
+    cfn = get_connection(Cloudformation)
     ec2 = get_connection(EC2)
+    master = ec2.get_master_instance()
+
     print "Waiting for SSH on all instances..."
-    ec2.wait_for_ssh(stack_name)
+    stack_instances = cfn.get_stack_instance_ids(stack_name)
+    ec2.wait_for_ssh(stack_instances)
+
     candidates = get_candidate_minions(stack_name)
     existing_minions = ec2.get_minions(stack_name)
     to_install = list(set(candidates).difference(set(existing_minions)))
     if not to_install:
         return
+
     public_ips = ec2.get_instance_public_ips(to_install)
     sha = '6080a18e6c7c2d49335978fa69fa63645b45bc2a'
-    master_inst = ec2.get_master_instance(stack_name)
-    master_public_ip = master_inst.ip_address
-    master_prv_ip = master_inst.private_ip_address
-    ec2.set_instance_tags(to_install, {'SaltMasterPrvIP': master_prv_ip})
+
     for inst_ip in public_ips:
         env.host_string = 'ubuntu@%s' % inst_ip
         sudo('wget https://raw.githubusercontent.com/ministryofjustice/bootstrap-salt/master/scripts/bootstrap-salt.sh -O /tmp/moj-bootstrap.sh')
@@ -88,30 +106,24 @@ def install_minions():
         sudo('chmod 755 /tmp/bootstrap-salt.sh')
         sudo(
             '/tmp/bootstrap-salt.sh -A `cat /etc/tags/SaltMasterPrvIP` git v2014.1.4')
-        env.host_string = 'ubuntu@%s' % master_public_ip
+        env.host_string = 'ubuntu@%s' % master.ip_address
         sudo('salt-key -y -A')
 
 
+@task
 def install_master():
     _validate_fabric_env()
-    stack_name = get_stack_name()
-    ec2 = get_connection(EC2)
-    cfn = get_connection(Cloudformation)
-    print "Waiting for SSH on all instances..."
-    ec2.wait_for_ssh(stack_name)
-    instance_ids = cfn.get_stack_instance_ids(stack_name)
-    master_inst = ec2.get_master_instance(stack_name)
-    master = master_inst.id if master_inst else random.choice(instance_ids)
-    master_prv_ip = ec2.get_instance_private_ips([master])[0]
-    master_public_ip = ec2.get_instance_public_ips([master])[0]
-    ec2.set_instance_tags(instance_ids, {'SaltMasterPrvIP': master_prv_ip})
-    ec2.set_instance_tags(master, {'SaltMaster': 'True'})
 
-    stack_ips = ec2.get_instance_private_ips(instance_ids)
-    stack_ips.remove(master_prv_ip)
-    stack_public_ips = ec2.get_instance_public_ips(instance_ids)
-    stack_public_ips.remove(master_public_ip)
-    env.host_string = 'ubuntu@%s' % master_public_ip
+    ec2 = get_connection(EC2)
+    master = ec2.get_master_instance()
+
+    print "Waiting for SSH on master..."
+    ec2.wait_for_ssh([master.id])
+    print "Ready"
+
+    ec2.set_instance_tags(master.id, {'SaltMaster': 'True'})
+
+    env.host_string = 'ubuntu@%s' % master.ip_address
     sha = '6080a18e6c7c2d49335978fa69fa63645b45bc2a'
     sudo('wget https://raw.githubusercontent.com/ministryofjustice/bootstrap-salt/master/scripts/bootstrap-salt.sh -O /tmp/moj-bootstrap.sh')
     sudo('chmod 755 /tmp/moj-bootstrap.sh')
@@ -127,12 +139,26 @@ def install_master():
 
 
 @task
+def add_master_ip_to_minions():
+    _validate_fabric_env()
+    stack_name = get_stack_name()
+
+    ec2 = get_connection(EC2)
+    cfn = get_connection(Cloudformation)
+
+    master = ec2.get_master_instance()
+    instance_ids = cfn.get_stack_instance_ids(stack_name)
+
+    ec2.set_instance_tags(instance_ids, {'SaltMasterPrvIP': master.private_ip_address})
+
+
+@task
 def rsync():
     _validate_fabric_env()
     work_dir = os.path.dirname(env.real_fabfile)
-    project_config = config.ProjectConfig(env.config,
-                                          env.environment,
-                                          env.stack_passwords)
+    project_config = cfn_config.ProjectConfig(env.config,
+                                              env.environment,
+                                              env.stack_passwords)
     cfg = project_config.config
 
     salt_cfg = cfg.get('salt', {})
