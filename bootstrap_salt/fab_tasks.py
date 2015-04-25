@@ -68,30 +68,33 @@ def find_master():
 
 def get_candidate_minions(stack_name):
     cfn = get_connection(Cloudformation)
-    ec2 = get_connection(EC2)
-    instance_ids = cfn.get_stack_instance_ids(stack_name)
-    master_instance_id = ec2.get_master_instance().id
-    instance_ids.remove(master_instance_id)
-    return instance_ids
+
+    return cfn.get_stack_instance_ids(stack_name)
 
 
+@task
 def install_minions():
     _validate_fabric_env()
+    add_master_ip_to_minions()
+
     stack_name = get_stack_name()
+    cfn = get_connection(Cloudformation)
     ec2 = get_connection(EC2)
+    master = ec2.get_master_instance()
+
     print "Waiting for SSH on all instances..."
-    ec2.wait_for_ssh(stack_name)
+    stack_instances = cfn.get_stack_instance_ids(stack_name)
+    ec2.wait_for_ssh(stack_instances)
+
     candidates = get_candidate_minions(stack_name)
     existing_minions = ec2.get_minions(stack_name)
     to_install = list(set(candidates).difference(set(existing_minions)))
     if not to_install:
         return
+
     public_ips = ec2.get_instance_public_ips(to_install)
     sha = '6080a18e6c7c2d49335978fa69fa63645b45bc2a'
-    master_inst = ec2.get_master_instance()
-    master_public_ip = master_inst.ip_address
-    master_prv_ip = master_inst.private_ip_address
-    ec2.set_instance_tags(to_install, {'SaltMasterPrvIP': master_prv_ip})
+
     for inst_ip in public_ips:
         env.host_string = 'ubuntu@%s' % inst_ip
         sudo('wget https://raw.githubusercontent.com/ministryofjustice/bootstrap-salt/master/scripts/bootstrap-salt.sh -O /tmp/moj-bootstrap.sh')
@@ -103,7 +106,7 @@ def install_minions():
         sudo('chmod 755 /tmp/bootstrap-salt.sh')
         sudo(
             '/tmp/bootstrap-salt.sh -A `cat /etc/tags/SaltMasterPrvIP` git v2014.1.4')
-        env.host_string = 'ubuntu@%s' % master_public_ip
+        env.host_string = 'ubuntu@%s' % master.ip_address
         sudo('salt-key -y -A')
 
 
@@ -136,7 +139,7 @@ def install_master():
 
 
 @task
-def set_master_private_ip():
+def add_master_ip_to_minions():
     _validate_fabric_env()
     stack_name = get_stack_name()
 
@@ -146,7 +149,7 @@ def set_master_private_ip():
     master = ec2.get_master_instance()
     instance_ids = cfn.get_stack_instance_ids(stack_name)
 
-    ec2.set_instance_tags(instance_ids, {'SaltMasterPrvIP': master.ip_address})
+    ec2.set_instance_tags(instance_ids, {'SaltMasterPrvIP': master.private_ip_address})
 
 
 @task
