@@ -38,12 +38,12 @@ Bootstrap-salt uses `fabric <http://www.fabfile.org/>`_
 
 If you also want to bootstrap the salt master and minions, you can do this::
 
-    fab application:courtfinder aws:prod environment:dev config:/path/to/courtfinder-dev.yaml salt.setup
+    fab application:app-name aws:dev environment:dev config:/path/to/app-name-dev-config.yaml salt.setup
 
-- **application:courtfinder** - should match the name given to bootstrap-cfn
+- **application:app-name** - should match the name given to bootstrap-cfn
 - **aws:dev** - is a way to differentiate between AWS accounts ``(~/.config.yaml)``
 - **environment:dev** - should match the environment given to bootstrap-cfn
-- **config:/path/to/file.yaml** - The location to the project YAML file
+- **config:/path/to/app-name-dev-config.yaml** - The location to the project YAML file
 
 Example Configuration
 ======================
