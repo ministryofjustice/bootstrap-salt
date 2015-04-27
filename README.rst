@@ -103,3 +103,37 @@ The cloudformation yaml will be automatically uploaded to your pillar as cloudfo
 ::
 
     salt-call pillar.get s3:static-bucket-name
+
+Github based SSH key generation
++++++++++++++++++++++++++++++++
+Add this to your template yaml:
+
+::
+   
+    myenv:
+      github_users:
+        ministryofjustice: # or any org
+          individuals:
+            - koikonom:
+                fingerprints:
+                  - '35:53:6f:27:fe:39:8b:d8:dd:87:19:f3:40:d2:84:6a'
+                unix_username:
+                  kyriakos
+            - ashb:
+                fingerprints:
+                  - '0c:11:2b:78:ff:8d:5f:f0:dc:27:8e:e2:f8:2f:ab:25'
+                  - 'af:e0:6c:dc:bd:9b:bf:1d:9b:de:2d:de:12:6e:f2:8a'
+            - mattmb
+          teams:
+            - some-team-name
+              - some-user:
+                  unix_username: userunixusername
+                  fingerprints: 00:11:22:33:44:55:66
+            - anotherteam
+
+Running this requires a github token with permissions to read the github organisation stored in an environment variable called GH_TOKEN.
+Once you set the variable just run
+
+::
+fab application:<yourapp> aws:<your_aws_profile> environment:myenv config:<your template yaml file> ssh_keys
+

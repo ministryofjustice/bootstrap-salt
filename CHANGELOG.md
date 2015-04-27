@@ -1,6 +1,7 @@
 ## Version unreleased
 
 * Sync salt_utils script with every rsync.
+* Generate SSH keys from Github.
 
 ## Version 0.1.0
 
