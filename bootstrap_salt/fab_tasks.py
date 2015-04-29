@@ -5,6 +5,8 @@ from StringIO import StringIO
 import sys
 import random
 import yaml
+import logging
+logging.basicConfig(level=logging.INFO)
 
 from fabric.api import env, task, sudo, put
 from fabric.contrib.project import upload_project
@@ -44,7 +46,7 @@ def get_connection(klass):
     return klass(env.aws, env.aws_region)
 
 
-def find_master():
+def get_master_ip():
     _validate_fabric_env()
     stack_name = get_stack_name()
     ec2 = get_connection(EC2)
@@ -53,32 +55,46 @@ def find_master():
     return master
 
 
-def set_master_dns():
-    master_ip = find_master()
+@task
+def find_master():
+    _validate_fabric_env()
     project_config = config.ProjectConfig(env.config,
                                           env.environment,
                                           env.stack_passwords)
     cfg = project_config.config
-    zone_name = cfg['master_zone']
+    try:
+        zone_name = cfg['master_zone']
+    except KeyError:
+        logging.warn("master_zone not found in config file, "
+                     "so DNS discovery of master not possible, "
+                     "falling back to AWS EC2 API.")
+        return get_master_ip()
+    master = 'master.{0}.{1}.{2}'.format(env.environment,
+                                         env.application,
+                                         zone_name)
+    return master
+
+
+def set_master_dns():
+    master_ip = get_master_ip()
+    project_config = config.ProjectConfig(env.config,
+                                          env.environment,
+                                          env.stack_passwords)
+    cfg = project_config.config
+    try:
+        zone_name = cfg['master_zone']
+    except KeyError:
+        logging.warn("master_zone not found in config file, "
+                     "no DNS entry will be created, you will "
+                     "need AWS access to deploy etc.")
+        return False
     r53 = get_connection(R53)
     zone_id = r53.get_hosted_zone_id(zone_name)
     dns_name = 'master.{0}.{1}.{2}'.format(env.environment,
                                            env.application,
                                            zone_name)
     r53.update_dns_record(zone_id, dns_name, 'A', master_ip)
-
-
-def get_master_name():
-    _validate_fabric_env()
-    project_config = config.ProjectConfig(env.config,
-                                          env.environment,
-                                          env.stack_passwords)
-    cfg = project_config.config
-    zone_name = cfg['master_zone']
-    dns_name = 'master.{0}.{1}.{2}'.format(env.environment,
-                                           env.application,
-                                           zone_name)
-    return dns_name
+    return True
 
 
 def get_candidate_minions(stack_name):
@@ -198,7 +214,7 @@ def rsync():
     remote_state_dir = salt_cfg.get('remote_state_dir', '/srv/salt')
     remote_pillar_dir = salt_cfg.get('remote_pillar_dir', '/srv/pillar')
 
-    master_ip = get_master_name()
+    master_ip = find_master()
     env.host_string = '{0}@{1}'.format(env.user, master_ip)
     sudo('mkdir -p {0}'.format(remote_state_dir))
     sudo('mkdir -p {0}'.format(remote_pillar_dir))
