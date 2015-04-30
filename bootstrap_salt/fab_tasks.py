@@ -26,6 +26,7 @@ sys.path.append(os.path.dirname(path))
 
 env.stack = None
 
+
 @task
 def aws(x):
     env.aws = str(x).lower()
@@ -80,15 +81,21 @@ def install_minions():
     ec2.set_instance_tags(to_install, {'SaltMasterPrvIP': master_prv_ip})
     for inst_ip in public_ips:
         env.host_string = 'ubuntu@%s' % inst_ip
-        sudo('wget https://raw.githubusercontent.com/ministryofjustice/bootstrap-salt/master/scripts/bootstrap-salt.sh -O /tmp/moj-bootstrap.sh')
-        sudo('chmod 755 /tmp/moj-bootstrap.sh')
-        sudo('/tmp/moj-bootstrap.sh')
+        # copy the salt_utils.py from local to EC2 and chmod it
+        d = os.path.dirname(__file__)
+        saltutils = d + "/salt_utils.py"
+        if not os.path.isfile(saltutils):
+            print "ERROR: Cannot find %s" % saltutils
+            sys.exit(1)
+        put(saltutils, '/usr/local/bin', use_sudo=True)
+        sudo('chmod 755 /usr/local/bin/salt_utils.py')
+        #
         sudo(
             'wget https://raw.githubusercontent.com/saltstack/salt-bootstrap/%s/bootstrap-salt.sh -O /tmp/bootstrap-salt.sh' %
             sha)
         sudo('chmod 755 /tmp/bootstrap-salt.sh')
         sudo(
-            '/tmp/bootstrap-salt.sh -A `cat /etc/tags/SaltMasterPrvIP` git v2014.1.4')
+            '/tmp/bootstrap-salt.sh -A ' + master_prv_ip + ' git v2014.1.4')
         env.host_string = 'ubuntu@%s' % master_public_ip
         sudo('salt-key -y -A')
 
@@ -114,16 +121,23 @@ def install_master():
     stack_public_ips.remove(master_public_ip)
     env.host_string = 'ubuntu@%s' % master_public_ip
     sha = '6080a18e6c7c2d49335978fa69fa63645b45bc2a'
-    sudo('wget https://raw.githubusercontent.com/ministryofjustice/bootstrap-salt/master/scripts/bootstrap-salt.sh -O /tmp/moj-bootstrap.sh')
-    sudo('chmod 755 /tmp/moj-bootstrap.sh')
-    sudo('/tmp/moj-bootstrap.sh')
+    # copy the salt_utils.py from local to EC2 and chmod it
+    d = os.path.dirname(__file__)
+    saltutils = d + "/salt_utils.py"
+    if not os.path.isfile(saltutils):
+        print "ERROR: Cannot find %s" % saltutils
+        sys.exit(1)
+    put(saltutils, '/usr/local/bin', use_sudo=True)
+    sudo('chmod 755 /usr/local/bin/salt_utils.py')
+    sudo('chmod 755 /usr/local/bin/salt_utils.py')
+    #
     sudo(
         'wget https://raw.githubusercontent.com/saltstack/salt-bootstrap/%s/bootstrap-salt.sh -O /tmp/bootstrap-salt.sh' %
         sha)
     sudo('chmod 755 /tmp/bootstrap-salt.sh')
     sudo(
-        '/tmp/bootstrap-salt.sh -M -A `cat /etc/tags/SaltMasterPrvIP`\
-         git v2014.1.4')
+        '/tmp/bootstrap-salt.sh -M -A ' + master_prv_ip +
+        ' git v2014.1.4')
     sudo('salt-key -y -A')
 
 
