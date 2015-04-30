@@ -1,6 +1,5 @@
 import unittest
 import mock
-from bootstrap_salt import errors
 import sys
 # This is a hack so that we don't need salt to run our tests
 sys.modules['salt'] = mock.Mock()
@@ -18,7 +17,7 @@ class SaltUtilTestCase(unittest.TestCase):
     def test_state_result(self):
         salt.config = mock.Mock()
         mock_result = mock.Mock()
-        mock_config = {'cmd.return_value': {'minon1': {'state':{'result':True}}}}
+        mock_config = {'cmd.return_value': {'minon1': {'state': {'result': True}}}}
         mock_result.configure_mock(**mock_config)
 
         mock_client = mock.Mock()
@@ -46,14 +45,14 @@ class SaltUtilTestCase(unittest.TestCase):
         self.assertFalse(x)
 
     def test_check_state_result_good(self):
-        result = {'minon1': {'state':{'result':True}},
-                  'minion2': {'state':{'result':True}}} 
+        result = {'minon1': {'state': {'result': True}},
+                  'minion2': {'state': {'result': True}}}
         x = salt_utils.check_state_result(result)
         self.assertTrue(x)
 
     def test_check_state_result_bad(self):
-        result = {'minon1': {'state':{'result':False}},
-                  'minion2': {'state':{'result':True}}} 
+        result = {'minon1': {'state': {'result': False}},
+                  'minion2': {'state': {'result': True}}}
         with self.assertRaises(salt_utils.SaltStateError):
             salt_utils.check_state_result(result)
 
