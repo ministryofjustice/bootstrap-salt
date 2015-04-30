@@ -2,7 +2,6 @@
 import salt
 import salt.runner
 import salt.client
-import pprint
 import time
 import sys
 
@@ -93,15 +92,15 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='Run salt states')
     parser.add_argument('-t', dest='target', type=str,
-                       help='target', required=True)
+                        help='target', required=True)
     parser.add_argument('-s', dest='state', type=str,
-                       help='Name of state or "highstate"', required=True)
+                        help='Name of state or "highstate"', required=True)
     parser.add_argument('-T', dest='timeout', type=float,
-                       help='Timeout to wait for state execution to finish'\
-                            'on all minions.', required=False, default=1800)
+                        help='Timeout to wait for state execution to finish'
+                        'on all minions.', required=False, default=1800)
     parser.add_argument('-I', dest='interval', type=float,
-                       help='Interval to check for finished execution.',
-                       required=False, default=10)
+                        help='Interval to check for finished execution.',
+                        required=False, default=10)
 
     args = parser.parse_args()
     if args.state == "highstate":
