@@ -85,7 +85,6 @@ def check_state_result(result):
     if all(results):
         return True
     else:
-
         raise SaltStateError('State did not execute successfully')
 
 if __name__ == "__main__":

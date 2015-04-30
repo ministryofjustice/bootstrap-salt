@@ -54,12 +54,12 @@ class SaltUtilTestCase(unittest.TestCase):
     def test_check_state_result_bad(self):
         result = {'minon1': {'state':{'result':False}},
                   'minion2': {'state':{'result':True}}} 
-        with self.assertRaises(errors.SaltStateError):
+        with self.assertRaises(salt_utils.SaltStateError):
             salt_utils.check_state_result(result)
 
     def test_check_state_result_parse_error(self):
         result = {'minon1': ['SOME SALT PARSER ERROR']}
-        with self.assertRaises(errors.SaltParserError):
+        with self.assertRaises(salt_utils.SaltParserError):
             salt_utils.check_state_result(result)
 
     def tearDown(self):
