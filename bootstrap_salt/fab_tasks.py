@@ -43,6 +43,7 @@ def get_connection(klass):
     return klass(env.aws, env.aws_region)
 
 
+@task
 def find_master():
     _validate_fabric_env()
     stack_name = get_stack_name()

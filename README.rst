@@ -1,5 +1,5 @@
-.. image:: https://travis-ci.org/ministryofjustice/bootstrap-salt.svg
-    :target: https://travis-ci.org/ministryofjustice/bootstrap-salt
+.. image:: https://travis-ci.org/ministryofjustice/bootstrap-salt.svg?branch=master
+    :target: https://travis-ci.org/ministryofjustice/bootstrap-salt?branch=master
 
 .. image:: https://coveralls.io/repos/ministryofjustice/bootstrap-salt/badge.svg?branch=master
     :target: https://coveralls.io/r/ministryofjustice/bootstrap-salt?branch=master
