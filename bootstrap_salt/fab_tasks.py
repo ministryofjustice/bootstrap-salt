@@ -26,6 +26,7 @@ sys.path.append(os.path.dirname(path))
 
 env.stack = None
 
+
 @task
 def aws(x):
     env.aws = str(x).lower()
@@ -85,8 +86,7 @@ def install_minions():
         if not os.path.isfile(saltutils):
             print "ERROR: Cannot find %s" % saltutils
             sys.exit(1)
-        put(saltutils, '/tmp')
-        sudo('cp /tmp/salt_utils.py /usr/local/bin')
+        put(saltutils, '/usr/local/bin', use_sudo=True)
         sudo('chmod 755 /usr/local/bin/salt_utils.py')
         #
         sudo(
@@ -126,8 +126,8 @@ def install_master():
     if not os.path.isfile(saltutils):
         print "ERROR: Cannot find %s" % saltutils
         sys.exit(1)
-    put(saltutils, '/tmp')
-    sudo('cp /tmp/salt_utils.py /usr/local/bin')
+    put(saltutils, '/usr/local/bin', use_sudo=True)
+    sudo('chmod 755 /usr/local/bin/salt_utils.py')
     sudo('chmod 755 /usr/local/bin/salt_utils.py')
     #
     sudo(
