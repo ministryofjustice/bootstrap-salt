@@ -25,7 +25,7 @@ class CfnTimeoutError(BootstrapCfnError):
     pass
 
 
-def timeout(timeout, interval):
+def do_timeout(timeout, interval):
 
     def decorate(func):
 
@@ -66,13 +66,13 @@ def state_result(jid):
 
 def highstate(target, timeout, interval):
     jid = start_highstate(target)
-    res = timeout(timeout, interval)(state_result)(jid)
+    res = do_timeout(timeout, interval)(state_result)(jid)
     return check_state_result(res)
 
 
 def state(target, state, timeout, interval):
     jid = start_state(target, state)
-    res = timeout(timeout, interval)(state_result)(jid)
+    res = do_timeout(timeout, interval)(state_result)(jid)
     return check_state_result(res)
 
 
