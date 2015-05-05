@@ -43,7 +43,6 @@ def get_connection(klass):
     return klass(env.aws, env.aws_region)
 
 
-@task
 def find_master():
     _validate_fabric_env()
     stack_name = get_stack_name()
@@ -70,7 +69,8 @@ def install_minions():
     ec2.wait_for_ssh(stack_name)
     candidates = get_candidate_minions(stack_name)
     existing_minions = ec2.get_minions(stack_name)
-    to_install = list(set(candidates).difference(set(existing_minions)))
+    to_install = list(set(candidates).difference(set(
+        [x.id for x in existing_minions])))
     if not to_install:
         return
     public_ips = ec2.get_instance_public_ips(to_install)
