@@ -10,7 +10,7 @@ from fabric.api import env, task, sudo, put
 from fabric.contrib.project import upload_project
 from cloudformation import Cloudformation
 from ec2 import EC2
-import bootstrap_cfn.config as config
+import bootstrap_cfn.config as cfn_config
 from bootstrap_cfn.fab_tasks import _validate_fabric_env, get_stack_name
 
 # GLOBAL VARIABLES
@@ -30,6 +30,21 @@ env.stack = None
 @task
 def aws(x):
     env.aws = str(x).lower()
+
+
+@task
+def environment(x):
+    env.environment = str(x).lower()
+
+
+@task
+def application(x):
+    env.application = str(x).lower()
+
+
+@task
+def config(x):
+    env.config = str(x).lower()
 
 
 @task
@@ -145,9 +160,9 @@ def install_master():
 def rsync():
     _validate_fabric_env()
     work_dir = os.path.dirname(env.real_fabfile)
-    project_config = config.ProjectConfig(env.config,
-                                          env.environment,
-                                          env.stack_passwords)
+    project_config = cfn_config.ProjectConfig(env.config,
+                                              env.environment,
+                                              env.stack_passwords)
     cfg = project_config.config
 
     salt_cfg = cfg.get('salt', {})
