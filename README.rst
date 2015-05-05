@@ -70,6 +70,18 @@ And when you run the tool you must set the ARN ID of the role in the separate ac
 
     AWS_ROLE_ARN_ID='arn:aws:iam::123456789012:role/S3Access' fab application:courtfinder aws:prod environment:dev config:/path/to/courtfinder-dev.yaml salt.setup
 
+Salt master DNS
+++++++++++++++++
+This tool will attempt to create a DNS entry for the salt master during the bootstrap process. You must specify the zone in which to create the entry in the bootstrap-cfn config file like so::
+
+    master_zone: myzone.dsd.io
+
+If you do not specify a zone, then no entry will be created and you will need AWS credentials as above to discover the master when deploying etc.
+
+The entry created will be::
+
+    master.<environment>.<application>.<master_zone>
+
 Salt specific configuration
 ++++++++++++++++++++++++++++
 

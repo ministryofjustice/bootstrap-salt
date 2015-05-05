@@ -69,6 +69,7 @@ class BootstrapSaltTestCase(unittest.TestCase):
                                   'multi-az': False,
                                   'storage': 5,
                                   'storage-type': 'gp2'},
+                          'master_zone': 'blah.dsd.io',
                           's3': {'static-bucket-name': 'moj-test-dev-static'}}}
         yaml.dump(config, open(self.env.config, 'w'))
 
