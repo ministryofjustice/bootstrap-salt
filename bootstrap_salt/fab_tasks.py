@@ -134,7 +134,11 @@ def install_minions():
             sys.exit(1)
         put(saltutils, '/usr/local/bin', use_sudo=True)
         sudo('chmod 755 /usr/local/bin/salt_utils.py')
-        #
+        sudo('wget '
+             'https://raw.githubusercontent.com/ministryofjustice/bootstrap-salt/master/scripts/moj-bootstrap.sh '
+             '-O /tmp/moj-bootstrap.sh')
+        sudo('chmod 755 /tmp/moj-bootstrap.sh')
+        sudo('/tmp/moj-bootstrap.sh')
         sudo(
             'wget https://raw.githubusercontent.com/saltstack/salt-bootstrap/%s/bootstrap-salt.sh -O /tmp/bootstrap-salt.sh' %
             sha)
@@ -176,7 +180,11 @@ def install_master():
     put(saltutils, '/usr/local/bin', use_sudo=True)
     sudo('chmod 755 /usr/local/bin/salt_utils.py')
     sudo('chmod 755 /usr/local/bin/salt_utils.py')
-    #
+    sudo('wget '
+         'https://raw.githubusercontent.com/ministryofjustice/bootstrap-salt/master/scripts/moj-bootstrap.sh '
+         '-O /tmp/moj-bootstrap.sh')
+    sudo('chmod 755 /tmp/moj-bootstrap.sh')
+    sudo('/tmp/moj-bootstrap.sh')
     sudo(
         'wget https://raw.githubusercontent.com/saltstack/salt-bootstrap/%s/bootstrap-salt.sh -O /tmp/bootstrap-salt.sh' %
         sha)
