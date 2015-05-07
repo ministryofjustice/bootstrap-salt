@@ -1,4 +1,6 @@
-## Unreleased
+## Version 0.1.0
+
+First release to PyPi
 
 * Bug fix: Install boto at salt-bootstrap time.
 
