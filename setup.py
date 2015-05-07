@@ -19,7 +19,7 @@ setup(
         'Fabric>=1.10.1',
         'PyYAML>=3.11',
         'boto>=2.36.0',
-        'bootstrap-cfn>=0.3.0',
+        'bootstrap-cfn>=0.4.1',
     ],
     setup_requires=[
         'mock>=1.0.1',

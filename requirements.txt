@@ -1,7 +1,0 @@
-Fabric==1.10.1
-PyYAML==3.11
-boto==2.36.0
-mock==1.0.1
-testfixtures==4.1.2
-paramiko
-git+ssh://git@github.com/ministryofjustice/bootstrap-cfn.git@v0.3.0#egg=bootstrap-cfn>=0.3.0
