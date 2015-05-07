@@ -54,15 +54,11 @@ class EC2:
         resv = self.conn_ec2.get_all_reservations([inst_id])
         return [i for r in resv for i in r.instances][0] if resv else None
 
-    def get_master_instance(self, stack_name_or_id,
-                            master_tag_name='SaltMaster'):
-        stack_instances = self.cfn.get_stack_instances(stack_name_or_id)
-        stack_instance_ids = [x.instance_id for x in stack_instances]
-        filters = {'tag-key': master_tag_name,
-                   'instance-state-name': 'running',
-                   'instance-id': stack_instance_ids}
-        resv = self.conn_ec2.get_all_reservations(filters=filters)
-        return [i for r in resv for i in r.instances][0] if resv else None
+    def get_master_instance(self, stack_name_or_id):
+        instances = self.cfn.filter_stack_instances(
+            stack_name_or_id,
+            filters={'tag-key': 'SaltMaster'})
+        return instances[0] if len(instances) else None
 
     def get_minions(self, stack_name_or_id,
                     minion_tag_name='SaltMasterPrvIP', remove_master=False):
