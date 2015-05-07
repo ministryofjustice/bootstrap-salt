@@ -106,6 +106,17 @@ def get_candidate_minions(stack_name):
     return instance_ids
 
 
+def put_util_script():
+    # copy the salt_utils.py from local to EC2 and chmod it
+    d = os.path.dirname(__file__)
+    saltutils = d + "/salt_utils.py"
+    if not os.path.isfile(saltutils):
+        print "ERROR: Cannot find %s" % saltutils
+        sys.exit(1)
+    put(saltutils, '/usr/local/bin', use_sudo=True)
+    sudo('chmod 755 /usr/local/bin/salt_utils.py')
+
+
 def install_minions():
     _validate_fabric_env()
     stack_name = get_stack_name()
@@ -126,14 +137,7 @@ def install_minions():
     ec2.set_instance_tags(to_install, {'SaltMasterPrvIP': master_prv_ip})
     for inst_ip in public_ips:
         env.host_string = 'ubuntu@%s' % inst_ip
-        # copy the salt_utils.py from local to EC2 and chmod it
-        d = os.path.dirname(__file__)
-        saltutils = d + "/salt_utils.py"
-        if not os.path.isfile(saltutils):
-            print "ERROR: Cannot find %s" % saltutils
-            sys.exit(1)
-        put(saltutils, '/usr/local/bin', use_sudo=True)
-        sudo('chmod 755 /usr/local/bin/salt_utils.py')
+        put_util_script()
         run('wget https://raw.githubusercontent.com/saltstack/salt-bootstrap/%s/bootstrap-salt.sh -O /tmp/bootstrap-salt.sh' % sha)
         sudo('chmod 755 /tmp/bootstrap-salt.sh')
         sudo('/tmp/bootstrap-salt.sh -A ' + master_prv_ip + ' -p python-boto git v2014.1.4')
@@ -159,14 +163,7 @@ def install_master():
 
     env.host_string = 'ubuntu@%s' % master_public_ip
     sha = '6080a18e6c7c2d49335978fa69fa63645b45bc2a'
-    # copy the salt_utils.py from local to EC2 and chmod it
-    d = os.path.dirname(__file__)
-    saltutils = d + "/salt_utils.py"
-    if not os.path.isfile(saltutils):
-        print "ERROR: Cannot find %s" % saltutils
-        sys.exit(1)
-    put(saltutils, '/usr/local/bin', use_sudo=True)
-    sudo('chmod 755 /usr/local/bin/salt_utils.py')
+    put_util_script()
     run('wget https://raw.githubusercontent.com/saltstack/salt-bootstrap/%s/bootstrap-salt.sh -O /tmp/bootstrap-salt.sh' % sha)
     sudo('chmod 755 /tmp/bootstrap-salt.sh')
     sudo('/tmp/bootstrap-salt.sh -M -A ' + master_prv_ip + ' -p python-boto git v2014.1.4')
@@ -202,6 +199,7 @@ def rsync():
 
     master_ip = find_master()
     env.host_string = '{0}@{1}'.format(env.user, master_ip)
+    put_util_script()
     sudo('mkdir -p {0}'.format(remote_state_dir))
     sudo('mkdir -p {0}'.format(remote_pillar_dir))
     upload_project(
