@@ -157,10 +157,6 @@ def install_master():
     ec2.set_instance_tags(master, {'SaltMaster': 'True'})
     set_master_dns()
 
-    stack_ips = ec2.get_instance_private_ips(instance_ids)
-    stack_ips.remove(master_prv_ip)
-    stack_public_ips = ec2.get_instance_public_ips(instance_ids)
-    stack_public_ips.remove(master_public_ip)
     env.host_string = 'ubuntu@%s' % master_public_ip
     sha = '6080a18e6c7c2d49335978fa69fa63645b45bc2a'
     # copy the salt_utils.py from local to EC2 and chmod it
