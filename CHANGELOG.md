@@ -1,3 +1,11 @@
+## Unreleased
+
+* Bug fix: Install boto at salt-bootstrap time.
+
+  Without this tags_to_grains wouldn't work which meant that the EC2 tags were
+  not available as grains on the box which caused things to fail in odd ways
+
+
 ## Version 0.0.6
 
 * Remove tag script
