@@ -8,7 +8,7 @@ import yaml
 import logging
 logging.basicConfig(level=logging.INFO)
 
-from fabric.api import env, task, sudo, put
+from fabric.api import env, task, sudo, put, run
 from fabric.contrib.project import upload_project
 from cloudformation import Cloudformation
 from ec2 import EC2
@@ -134,9 +134,7 @@ def install_minions():
             sys.exit(1)
         put(saltutils, '/usr/local/bin', use_sudo=True)
         sudo('chmod 755 /usr/local/bin/salt_utils.py')
-        sudo(
-            'wget https://raw.githubusercontent.com/saltstack/salt-bootstrap/%s/bootstrap-salt.sh -O /tmp/bootstrap-salt.sh' %
-            sha)
+        run('wget https://raw.githubusercontent.com/saltstack/salt-bootstrap/%s/bootstrap-salt.sh -O /tmp/bootstrap-salt.sh' % sha)
         sudo('chmod 755 /tmp/bootstrap-salt.sh')
         sudo('/tmp/bootstrap-salt.sh -A ' + master_prv_ip + ' -p python-boto git v2014.1.4')
         env.host_string = 'ubuntu@%s' % master_public_ip
@@ -173,9 +171,7 @@ def install_master():
         sys.exit(1)
     put(saltutils, '/usr/local/bin', use_sudo=True)
     sudo('chmod 755 /usr/local/bin/salt_utils.py')
-    sudo(
-        'wget https://raw.githubusercontent.com/saltstack/salt-bootstrap/%s/bootstrap-salt.sh -O /tmp/bootstrap-salt.sh' %
-        sha)
+    run('wget https://raw.githubusercontent.com/saltstack/salt-bootstrap/%s/bootstrap-salt.sh -O /tmp/bootstrap-salt.sh' % sha)
     sudo('chmod 755 /tmp/bootstrap-salt.sh')
     sudo('/tmp/bootstrap-salt.sh -M -A ' + master_prv_ip + ' -p python-boto git v2014.1.4')
     sudo('salt-key -y -A')
