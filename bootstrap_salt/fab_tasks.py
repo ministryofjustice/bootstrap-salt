@@ -134,13 +134,11 @@ def install_minions():
             sys.exit(1)
         put(saltutils, '/usr/local/bin', use_sudo=True)
         sudo('chmod 755 /usr/local/bin/salt_utils.py')
-        #
         sudo(
             'wget https://raw.githubusercontent.com/saltstack/salt-bootstrap/%s/bootstrap-salt.sh -O /tmp/bootstrap-salt.sh' %
             sha)
         sudo('chmod 755 /tmp/bootstrap-salt.sh')
-        sudo(
-            '/tmp/bootstrap-salt.sh -A ' + master_prv_ip + ' git v2014.1.4')
+        sudo('/tmp/bootstrap-salt.sh -A ' + master_prv_ip + ' -p python-boto git v2014.1.4')
         env.host_string = 'ubuntu@%s' % master_public_ip
         sudo('salt-key -y -A')
 
@@ -175,15 +173,11 @@ def install_master():
         sys.exit(1)
     put(saltutils, '/usr/local/bin', use_sudo=True)
     sudo('chmod 755 /usr/local/bin/salt_utils.py')
-    sudo('chmod 755 /usr/local/bin/salt_utils.py')
-    #
     sudo(
         'wget https://raw.githubusercontent.com/saltstack/salt-bootstrap/%s/bootstrap-salt.sh -O /tmp/bootstrap-salt.sh' %
         sha)
     sudo('chmod 755 /tmp/bootstrap-salt.sh')
-    sudo(
-        '/tmp/bootstrap-salt.sh -M -A ' + master_prv_ip +
-        ' git v2014.1.4')
+    sudo('/tmp/bootstrap-salt.sh -M -A ' + master_prv_ip + ' -p python-boto git v2014.1.4')
     sudo('salt-key -y -A')
 
 
