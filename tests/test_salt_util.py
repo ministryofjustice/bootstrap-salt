@@ -4,6 +4,8 @@ import sys
 # This is a hack so that we don't need salt to run our tests
 sys.modules['salt'] = mock.Mock()
 sys.modules['salt.runner'] = mock.Mock()
+sys.modules['salt.config'] = mock.Mock()
+sys.modules['salt.output'] = mock.Mock()
 sys.modules['salt.client'] = mock.Mock()
 import salt
 from bootstrap_salt import salt_utils

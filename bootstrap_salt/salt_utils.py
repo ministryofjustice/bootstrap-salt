@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 import salt
 import salt.runner
+import salt.config
 import salt.client
+import salt.output
 import time
 import sys
 
@@ -21,6 +23,10 @@ class SaltParserError(BootstrapCfnError):
 
 
 class CfnTimeoutError(BootstrapCfnError):
+    pass
+
+
+def do_nothing(*args, **kwargs):
     pass
 
 
@@ -56,8 +62,15 @@ def start_state(target, state):
 
 def state_result(jid):
     opts = salt.config.master_config('/etc/salt/master')
+    # This is added because salt 2014.7 no longer prints all the output from
+    # a highstate when you lookup the jid. Instead we print the output ourselves
+    # when we check the result and overwrite the salt outputter here to do
+    # nothing.
+    d_o = salt.output.display_output
+    salt.output.display_output = do_nothing
     r = salt.runner.RunnerClient(opts)
     result = r.cmd('jobs.lookup_jid', [jid])
+    salt.output.display_output = d_o
     if result:
         return result
     return False
@@ -77,7 +90,9 @@ def state(target, state, timeout, interval):
 
 def check_state_result(result):
     results = []
-    for ret in result.values():
+    __opts__ = salt.config.master_config('/etc/salt/master')
+    for minion, ret in result.items():
+        salt.output.display_output({minion: ret}, out='highstate', opts=__opts__)
         if isinstance(ret, dict):
             results += [v['result'] for v in ret.values()]
         else:
