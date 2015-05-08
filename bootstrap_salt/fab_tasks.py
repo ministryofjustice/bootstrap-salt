@@ -82,14 +82,14 @@ def application(application_name):
 
 
 @task
-def setup(stack_name=None):
+def setup(salt_version='v2014.7.5'):
     """
     Setup the salt master and minions
 
     Call install_master and install_minions to setup salt
     """
-    install_master()
-    install_minions()
+    install_master(salt_version)
+    install_minions(salt_version)
 
 
 def get_connection(klass):
@@ -166,7 +166,7 @@ def put_util_script():
     sudo('chmod 755 /usr/local/bin/salt_utils.py')
 
 
-def install_minions():
+def install_minions(salt_version):
     _validate_fabric_env()
     stack_name = get_stack_name()
     ec2 = get_connection(EC2)
@@ -190,7 +190,8 @@ def install_minions():
         put_util_script()
         run('wget https://raw.githubusercontent.com/saltstack/salt-bootstrap/%s/bootstrap-salt.sh -O /tmp/bootstrap-salt.sh' % sha)
         sudo('chmod 755 /tmp/bootstrap-salt.sh')
-        sudo('/tmp/bootstrap-salt.sh -A ' + master_prv_ip + ' -p python-boto git v2014.7.4')
+        sudo('/tmp/bootstrap-salt.sh -A {0} -p python-boto git '
+             '{1}'.format(master_prv_ip, salt_version))
         env.host_string = 'ubuntu@%s' % master_public_ip
         sudo('salt-key -y -A')
 
@@ -198,7 +199,7 @@ def install_minions():
         ec2.set_instance_tags([instance.id], {'SaltMasterPrvIP': master_prv_ip})
 
 
-def install_master():
+def install_master(salt_version):
     _validate_fabric_env()
     stack_name = get_stack_name()
     ec2 = get_connection(EC2)
@@ -223,7 +224,8 @@ def install_master():
     put_util_script()
     run('wget https://raw.githubusercontent.com/saltstack/salt-bootstrap/%s/bootstrap-salt.sh -O /tmp/bootstrap-salt.sh' % sha)
     sudo('chmod 755 /tmp/bootstrap-salt.sh')
-    sudo('/tmp/bootstrap-salt.sh -M -A ' + master_prv_ip + ' -p python-boto git v2014.7.4')
+    sudo('/tmp/bootstrap-salt.sh -M -A {0} -p python-boto git '
+         '{1}'.format(master_prv_ip, salt_version))
     sudo('salt-key -y -A')
 
 
