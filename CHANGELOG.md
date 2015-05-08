@@ -1,3 +1,7 @@
+## Version unreleased
+
+* Sync salt_utils script with every rsync.
+
 ## Version 0.1.0
 
 First release to PyPi
