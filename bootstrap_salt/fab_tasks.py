@@ -97,15 +97,6 @@ def set_master_dns():
     return True
 
 
-def get_candidate_minions(stack_name):
-    cfn = get_connection(Cloudformation)
-    ec2 = get_connection(EC2)
-    instance_ids = cfn.get_stack_instance_ids(stack_name)
-    master_instance_id = ec2.get_master_instance(stack_name).id
-    instance_ids.remove(master_instance_id)
-    return instance_ids
-
-
 def put_util_script():
     # copy the salt_utils.py from local to EC2 and chmod it
     d = os.path.dirname(__file__)
@@ -123,26 +114,31 @@ def install_minions():
     ec2 = get_connection(EC2)
     print "Waiting for SSH on all instances..."
     ec2.wait_for_ssh(stack_name)
-    candidates = get_candidate_minions(stack_name)
-    existing_minions = ec2.get_minions(stack_name)
-    to_install = list(set(candidates).difference(set(
-        [x.id for x in existing_minions])))
-    if not to_install:
-        return
-    public_ips = ec2.get_instance_public_ips(to_install)
-    sha = '6080a18e6c7c2d49335978fa69fa63645b45bc2a'
+
     master_inst = ec2.get_master_instance(stack_name)
     master_public_ip = master_inst.ip_address
     master_prv_ip = master_inst.private_ip_address
-    ec2.set_instance_tags(to_install, {'SaltMasterPrvIP': master_prv_ip})
-    for inst_ip in public_ips:
-        env.host_string = 'ubuntu@%s' % inst_ip
+
+    to_install = ec2.get_unconfigured_minions(stack_name, master_prv_ip)
+
+    if not to_install:
+        return
+
+    sha = '6080a18e6c7c2d49335978fa69fa63645b45bc2a'
+    for instance in to_install:
+
+        env.host_string = 'ubuntu@%s' % instance.ip_address
+
         put_util_script()
         run('wget https://raw.githubusercontent.com/saltstack/salt-bootstrap/%s/bootstrap-salt.sh -O /tmp/bootstrap-salt.sh' % sha)
         sudo('chmod 755 /tmp/bootstrap-salt.sh')
         sudo('/tmp/bootstrap-salt.sh -A ' + master_prv_ip + ' -p python-boto git v2014.1.4')
+
         env.host_string = 'ubuntu@%s' % master_public_ip
         sudo('salt-key -y -A')
+
+        # Once we've installed, then set the tag so we don't install again
+        ec2.set_instance_tags([instance.id], {'SaltMasterPrvIP': master_prv_ip})
 
 
 def install_master():
@@ -152,13 +148,17 @@ def install_master():
     cfn = get_connection(Cloudformation)
     print "Waiting for SSH on all instances..."
     ec2.wait_for_ssh(stack_name)
-    instance_ids = cfn.get_stack_instance_ids(stack_name)
+
     master_inst = ec2.get_master_instance(stack_name)
-    master = master_inst.id if master_inst else random.choice(instance_ids)
+    if master_inst:
+        master = master_inst.id
+    else:
+        instance_ids = cfn.get_stack_instance_ids(stack_name)
+        master = random.choice(instance_ids)
+
     master_prv_ip = ec2.get_instance_private_ips([master])[0]
     master_public_ip = ec2.get_instance_public_ips([master])[0]
-    ec2.set_instance_tags(instance_ids, {'SaltMasterPrvIP': master_prv_ip})
-    ec2.set_instance_tags(master, {'SaltMaster': 'True'})
+    ec2.set_instance_tags(master, {'SaltMaster': 'True', 'SaltMasterPrvIP': master_prv_ip})
     set_master_dns()
 
     env.host_string = 'ubuntu@%s' % master_public_ip
