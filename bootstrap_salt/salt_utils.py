@@ -6,6 +6,7 @@ import salt.client
 import salt.output
 import time
 import sys
+import math
 
 
 class BootstrapCfnError(Exception):
@@ -30,6 +31,23 @@ def do_nothing(*args, **kwargs):
     pass
 
 
+def get_minions_batch(target, fraction=None):
+    '''
+    Takes a salt glob target and returns batches of minion ids that match
+    in the format [['minion1','minion2']]
+    If a fraction is specified the minions are split into batches sized by
+    that fraction i.e. 4 minions with fraction=0.5 will return:
+    [['minion1', 'minion2'],['minion3','minion4']]
+    '''
+    local = salt.client.LocalClient()
+    minions = local.cmd(target, 'test.ping').keys()
+    if fraction:
+        number_in_batch = int(math.ceil(len(minions)*float(fraction)))
+        return [minions[i:i+number_in_batch] for i in xrange(0, len(minions), number_in_batch)]
+    else:
+        return [minions]
+
+
 def do_timeout(timeout, interval):
 
     def decorate(func):
@@ -48,15 +66,15 @@ def do_timeout(timeout, interval):
     return decorate
 
 
-def start_highstate(target):
+def start_highstate(target, expr_form='list'):
     local = salt.client.LocalClient()
-    jid = local.cmd_async(target, 'state.highstate')
+    jid = local.cmd_async(target, 'state.highstate', expr_form=expr_form)
     return jid
 
 
-def start_state(target, state):
+def start_state(target, state, expr_form='list'):
     local = salt.client.LocalClient()
-    jid = local.cmd_async(target, 'state.sls', [state])
+    jid = local.cmd_async(target, 'state.sls', [state], expr_form=expr_form)
     return jid
 
 
@@ -76,16 +94,24 @@ def state_result(jid):
     return False
 
 
-def highstate(target, timeout, interval):
-    jid = start_highstate(target)
-    res = do_timeout(timeout, interval)(state_result)(jid)
-    return check_state_result(res)
+def highstate(target, fraction, timeout, interval):
+    results = []
+    for b in get_minions_batch(target, fraction):
+        jid = start_highstate(','.join(b), expr_form='list')
+        res = do_timeout(timeout, interval)(state_result)(jid)
+        results.append(check_state_result(res))
+        print "Minions {0} complete".format(b)
+    return all(results)
 
 
-def state(target, state, timeout, interval):
-    jid = start_state(target, state)
-    res = do_timeout(timeout, interval)(state_result)(jid)
-    return check_state_result(res)
+def state(target, state, fraction, timeout, interval):
+    results = []
+    for b in get_minions_batch(target, fraction):
+        jid = start_state(','.join(b), state, expr_form='list')
+        res = do_timeout(timeout, interval)(state_result)(jid)
+        results.append(check_state_result(res))
+        print "Minions {0} complete".format(b)
+    return all(results)
 
 
 def check_state_result(result):
@@ -107,6 +133,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run salt states')
     parser.add_argument('-t', dest='target', type=str,
                         help='target', required=True)
+    parser.add_argument('-f', dest='fraction', type=float,
+                        help='for zero downtime deploy, decimal fraction of'
+                        'minions to deploy to at one time.', required=False,
+                        default=None)
     parser.add_argument('-s', dest='state', type=str,
                         help='Name of state or "highstate"', required=True)
     parser.add_argument('-T', dest='timeout', type=float,
@@ -118,6 +148,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     if args.state == "highstate":
-        highstate(args.target, args.timeout, args.interval)
+        highstate(args.target, args.fraction, args.timeout, args.interval)
     else:
-        state(args.target, args.state, args.timeout, args.interval)
+        state(args.target, args.state, args.fraction, args.timeout, args.interval)
