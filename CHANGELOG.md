@@ -3,6 +3,10 @@
 * Sync salt_utils script with every rsync.
 * Generate SSH keys from Github.
 
+## Version 0.1.1
+
+* Bug fix: salt would only install on the master
+
 ## Version 0.1.0
 
 First release to PyPi
