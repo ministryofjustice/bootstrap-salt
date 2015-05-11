@@ -10,11 +10,14 @@ logging.basicConfig(level=logging.INFO)
 
 from fabric.api import env, task, sudo, put, run
 from fabric.contrib.project import upload_project
+from bootstrap_cfn.fab_tasks import _validate_fabric_env, \
+    get_stack_name, get_config, config
+
 from cloudformation import Cloudformation
 from ec2 import EC2
 from r53 import R53
-import bootstrap_cfn.config as config
-from bootstrap_cfn.fab_tasks import _validate_fabric_env, get_stack_name
+
+from .deploy_lib import github
 
 # GLOBAL VARIABLES
 env.aws = None
@@ -33,6 +36,16 @@ env.stack = None
 @task
 def aws(x):
     env.aws = str(x).lower()
+
+
+@task
+def environment(x):
+    env.environment = str(x).lower()
+
+
+@task
+def application(x):
+    env.application = str(x).lower()
 
 
 @task
@@ -225,3 +238,40 @@ def rsync():
             'cloudformation.sls'),
         local_path=cf_sls,
         use_sudo=True)
+
+
+@task(alias='ssh_keys')
+def generate_ssh_key_pillar(force=False, strict=True):
+    # force: ignore existing key file
+    # strict: remove all users not found in github
+    work_dir = os.path.dirname(env.real_fabfile)
+
+    config = get_config()
+    salt_cfg = config.data.get('salt', {})
+
+    local_pillar_dir = os.path.join(
+        work_dir, salt_cfg.get('local_pillar_dir', 'pillar'))
+    pillar_file = os.path.join(local_pillar_dir, env.environment, 'keys.sls')
+    key_config = config.data.get('github_users', {})
+    ssh_key_data = github.get_keys(key_config)
+
+    if os.path.exists(pillar_file) and not force:
+        with open(pillar_file) as pf_handle:
+            user_data = yaml.load(pf_handle)
+            current_admins = set(user_data.get('admins', {}).keys())
+    else:
+        current_admins = set()
+
+    if current_admins == set(ssh_key_data.keys()):
+        return
+
+    if strict and current_admins:
+        to_be_removed = current_admins - set(ssh_key_data.keys())
+        if (float(len(to_be_removed))/float(len(current_admins))) * 100 > 50.00:
+            print 'WARNING: Removing more than 50% of the current users.'
+        for absent_user in to_be_removed:
+            print 'Setting {} to absent.'.format(absent_user)
+            ssh_key_data.update({absent_user: {'absent': True}})
+
+    result = {'admins': ssh_key_data}
+    yaml.dump(result, open(pillar_file, 'w'), default_flow_style=False)
