@@ -1,4 +1,4 @@
-## Version 0.1.x
+## Version 0.1.2
 
 * Bug fix: import the correct config from bootstrap_cfn
 
