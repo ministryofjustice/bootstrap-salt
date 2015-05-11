@@ -1,3 +1,7 @@
+## Version 0.1.x
+
+* Bug fix: import the correct config from bootstrap_cfn
+
 ## Version 0.1.1
 
 * Sync salt_utils script with every rsync.
