@@ -8,10 +8,11 @@ import yaml
 import logging
 logging.basicConfig(level=logging.INFO)
 
+import bootstrap_cfn.config as config
 from fabric.api import env, task, sudo, put, run
 from fabric.contrib.project import upload_project
 from bootstrap_cfn.fab_tasks import _validate_fabric_env, \
-    get_stack_name, get_config, config
+    get_stack_name, get_config
 
 from cloudformation import Cloudformation
 from ec2 import EC2
