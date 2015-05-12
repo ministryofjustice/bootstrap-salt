@@ -67,18 +67,36 @@ def do_timeout(timeout, interval):
 
 
 def start_highstate(target, expr_form='list'):
+    '''
+    Starts a highstate job returns the job id
+    Args:
+        target(string): minion target string
+        expr_form(string): salt minion target format e.g. list, glob etc.
+    '''
     local = salt.client.LocalClient()
     jid = local.cmd_async(target, 'state.highstate', expr_form=expr_form)
     return jid
 
 
 def start_state(target, state, expr_form='list'):
+    '''
+    Starts a given state job returns the job id
+    Args:
+        target(string): minion target string
+        state(string): the state to run
+        expr_form(string): salt minion target format e.g. list, glob etc.
+    '''
     local = salt.client.LocalClient()
     jid = local.cmd_async(target, 'state.sls', [state], expr_form=expr_form)
     return jid
 
 
 def state_result(jid):
+    '''
+    Get the result of a given salt job id, return the results dictionary.
+    Args:
+        jid(int): salt job id
+    '''
     opts = salt.config.master_config('/etc/salt/master')
     # This is added because salt 2014.7 no longer prints all the output from
     # a highstate when you lookup the jid. Instead we print the output ourselves
@@ -95,6 +113,21 @@ def state_result(jid):
 
 
 def highstate(target, fraction, timeout, interval):
+    '''
+    Starts a highstate, blocks until all results have been checked. Returns True
+    or raises one of the following.
+    Raises:
+        SaltParserError: if any minion cannot execute the state
+        SaltStateError: if any state execution returns False
+        UtilTimeoutError: if the job does not finish in the given timeout
+    Args:
+        target(string): minion target string
+        fraction(float): the decimal fraction of minions to target in each batch
+        timeout(int): the number of seconds to wait for the highstate to finish
+            on all minions
+        interval(int): the number of seconds to wait between checking if the job
+            has finished
+    '''
     results = []
     for b in get_minions_batch(target, fraction):
         jid = start_highstate(','.join(b), expr_form='list')
@@ -105,6 +138,22 @@ def highstate(target, fraction, timeout, interval):
 
 
 def state(target, state, fraction, timeout, interval):
+    '''
+    Starts a state, blocks until all results have been checked. Returns True
+    or raises one of the following.
+    Raises:
+        SaltParserError: if any minion cannot execute the state
+        SaltStateError: if any state execution returns False
+        UtilTimeoutError: if the job does not finish in the given timeout
+    Args:
+        target(string): minion target string
+        fraction(float): the decimal fraction of minions to target in each batch
+        state(string): the state to run
+        timeout(int): the number of seconds to wait for the highstate to finish
+            on all minions
+        interval(int): the number of seconds to wait between checking if the job
+            has finished
+    '''
     results = []
     for b in get_minions_batch(target, fraction):
         jid = start_state(','.join(b), state, expr_form='list')
@@ -115,6 +164,15 @@ def state(target, state, fraction, timeout, interval):
 
 
 def check_state_result(result):
+    '''
+    Takes a salt results dictionary, prints the ouptut in salts highstate ouput
+    format and checks all states executed successfully. Returns True or raises:
+    Raises:
+        SaltParserError: if any minion cannot execute the state
+        SaltStateError: if any state execution returns False
+    Args:
+        result(dict): salt results dictionary
+    '''
     results = []
     __opts__ = salt.config.master_config('/etc/salt/master')
     for minion, ret in result.items():
