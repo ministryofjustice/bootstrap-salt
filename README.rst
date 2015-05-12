@@ -106,10 +106,9 @@ The cloudformation yaml will be automatically uploaded to your pillar as cloudfo
 
 Github based SSH key generation
 +++++++++++++++++++++++++++++++
-Add this to your template yaml:
+Add this to your template yaml::
 
-::
-   
+
     myenv:
       github_users:
         ministryofjustice: # or any org
@@ -132,8 +131,8 @@ Add this to your template yaml:
             - anotherteam
 
 Running this requires a github token with permissions to read the github organisation stored in an environment variable called GH_TOKEN.
-Once you set the variable just run
+Once you set the variable just run::
 
-::
-fab application:<yourapp> aws:<your_aws_profile> environment:myenv config:<your template yaml file> ssh_keys
+
+    fab application:<yourapp> aws:<your_aws_profile> environment:myenv config:<your template yaml file> ssh_keys
 
