@@ -9,21 +9,21 @@ import sys
 import math
 
 
-class BootstrapCfnError(Exception):
+class BootstrapUtilError(Exception):
 
     def __init__(self, msg):
         print >> sys.stderr, "[ERROR] {0}: {1}".format(self.__class__.__name__, msg)
 
 
-class SaltStateError(BootstrapCfnError):
+class SaltStateError(BootstrapUtilError):
     pass
 
 
-class SaltParserError(BootstrapCfnError):
+class SaltParserError(BootstrapUtilError):
     pass
 
 
-class CfnTimeoutError(BootstrapCfnError):
+class UtilTimeoutError(BootstrapUtilError):
     pass
 
 
@@ -59,7 +59,7 @@ def do_timeout(timeout, interval):
                 if result:
                     return result
                 if attempts >= timeout / interval:
-                    raise CfnTimeoutError("Timeout in {0}".format(func.__name__))
+                    raise UtilTimeoutError("Timeout in {0}".format(func.__name__))
                 attempts += 1
                 time.sleep(interval)
         return wrapper
