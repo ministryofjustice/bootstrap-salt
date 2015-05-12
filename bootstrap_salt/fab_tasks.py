@@ -35,22 +35,59 @@ env.stack = None
 
 
 @task
-def aws(x):
-    env.aws = str(x).lower()
+def aws(profile_name):
+    """
+    Set the AWS account to use
+
+    Sets the environment variable 'aws' to the name of the
+    account to use in the AWS config file (~/.aws/credentials.yaml)
+
+    Args:
+        profile_name(string): The string to set the environment
+        variable to
+    """
+    env.aws = str(profile_name).lower()
 
 
 @task
-def environment(x):
-    env.environment = str(x).lower()
+def environment(environment_name):
+    """
+    Set the environment section to be read from the project config
+    file
+
+    Sets the environment variable 'environment'.
+    The named section will be read from the project's YAML file
+
+    Args:
+        environment_name(string): The string to set the
+        variable to
+    """
+    env.environment = str(environment_name).lower()
 
 
 @task
-def application(x):
-    env.application = str(x).lower()
+def application(application_name):
+    """
+    Set the application name
+
+    Sets the environment variable 'application' to
+    an application name. Which is just a name to
+    associate with Cloudformation stack
+
+    Args:
+        application_name(string): The string to set the
+        variable to
+    """
+    env.application = str(application_name).lower()
 
 
 @task
 def setup(stack_name=None):
+    """
+    Setup the salt master and minions
+
+    Call install_master and install_minions to setup salt
+    """
     install_master()
     install_minions()
 
@@ -71,6 +108,13 @@ def get_master_ip():
 
 @task
 def find_master():
+    """
+    Find and return the FQDN of the salt master
+
+    Search for the salt masters zone within the project config
+    file, and then AWS if necessary, returning the fully
+    qualified domain name of the salt master
+    """
     _validate_fabric_env()
     project_config = config.ProjectConfig(env.config,
                                           env.environment,
@@ -186,6 +230,13 @@ def install_master():
 
 @task
 def rsync():
+    """
+    Upload the salt data directories to the salt master
+
+    Find the salt master, then upload the salt root directory,
+    the pillar data, and the vendor formulas directory setup
+    by salt-shaker.
+    """
     _validate_fabric_env()
     work_dir = os.path.dirname(env.real_fabfile)
     project_config = config.ProjectConfig(env.config,
@@ -243,6 +294,21 @@ def rsync():
 
 @task(alias='ssh_keys')
 def generate_ssh_key_pillar(force=False, strict=True):
+    """
+    Generate the ssh key pillar from the github users data in the
+    project config file
+
+    Using the github_users entry from the project config file,
+    this will get the corresponding keys from github and generate
+    a set of users with admin privileges, outputting them to
+    the pillar file.
+
+    https://github.com/ministryofjustice/bootstrap-salt#github-based-ssh-key-generation
+
+    Args:
+        force(bool): True to ignore the existing key file
+        strict(bool): True to remove all users not found in github
+    """
     # force: ignore existing key file
     # strict: remove all users not found in github
     work_dir = os.path.dirname(env.real_fabfile)
