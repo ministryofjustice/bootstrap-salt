@@ -16,6 +16,49 @@ class SaltUtilTestCase(unittest.TestCase):
     def setUp(self):
         pass
 
+    def test_get_minions_batch(self):
+        mock_result = mock.Mock()
+        # No batch
+        mock_config = {'cmd.return_value': {'minion1': 'blah',
+                                            'minion2': 'blah'}}
+        mock_result.configure_mock(**mock_config)
+        mock_client = mock.Mock()
+        mock_client.return_value = mock_result
+        mock_c = mock.Mock(LocalClient=mock_client)
+        salt.client = mock_c
+        x = salt_utils.get_minions_batch('*')
+        expected = [['minion1', 'minion2']]
+        self.assertEqual(x, expected)
+
+        # 50% batch
+        mock_config = {'cmd.return_value': {'minion1': 'blah',
+                                            'minion2': 'blah',
+                                            'minion3': 'blah',
+                                            'minion4': 'blah'}}
+        mock_result.configure_mock(**mock_config)
+        mock_client = mock.Mock()
+        mock_client.return_value = mock_result
+        mock_c = mock.Mock(LocalClient=mock_client)
+        salt.client = mock_c
+
+        x = salt_utils.get_minions_batch('*', 0.5)
+        expected = [['minion4', 'minion1'], ['minion3', 'minion2']]
+        self.assertEqual(x, expected)
+
+        # 50% batch uneven minons
+        mock_config = {'cmd.return_value': {'minion1': 'blah',
+                                            'minion2': 'blah',
+                                            'minion3': 'blah'}}
+        mock_result.configure_mock(**mock_config)
+        mock_client = mock.Mock()
+        mock_client.return_value = mock_result
+        mock_c = mock.Mock(LocalClient=mock_client)
+        salt.client = mock_c
+
+        x = salt_utils.get_minions_batch('*', 0.5)
+        expected = [['minion1', 'minion3'], ['minion2']]
+        self.assertEqual(x, expected)
+
     def test_state_result(self):
         salt.config = mock.Mock()
         mock_result = mock.Mock()

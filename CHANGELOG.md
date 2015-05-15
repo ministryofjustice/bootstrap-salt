@@ -1,3 +1,7 @@
+## Unreleased
+
+* Make it possible to target minions in batches by passing a decimal fraction to the salt_utils script.
+
 ## Version 0.1.2
 
 * Bug fix: import the correct config from bootstrap_cfn
