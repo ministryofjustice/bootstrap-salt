@@ -55,7 +55,7 @@ class EC2:
         return [i for r in resv for i in r.instances][0] if resv else None
 
     def get_master_instance(self, stack_name_or_id):
-        instances = self.cfn.filter_stack_instances(
+        instances = self.cfn.get_stack_instances(
             stack_name_or_id,
             filters={'tag-key': 'SaltMaster'})
         return instances[0] if len(instances) else None

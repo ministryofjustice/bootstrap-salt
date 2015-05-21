@@ -1,6 +1,7 @@
 ## Unreleased
 
 * Make it possible to target minions in batches by passing a decimal fraction to the salt_utils script.
+* Bug fix: search only running instances
 
 ## Version 0.1.2
 
