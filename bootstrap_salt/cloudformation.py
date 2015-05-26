@@ -39,11 +39,10 @@ class Cloudformation(object):
         resv = self.conn_ec2.get_all_reservations(filters=filters)
         return [i for r in resv for i in r.instances]
 
-    def get_stack_instances(self, stack_name_or_id, running_only=True):
+    def get_stack_instances(self, stack_name_or_id, running_only=True, filters={}):
         """
         Return boto Instance objects for every instance belonging to the stack
         """
-        filters = {}
         if running_only:
             filters['instance-state-name'] = 'running'
 

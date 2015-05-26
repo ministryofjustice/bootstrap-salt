@@ -149,7 +149,7 @@ class BootstrapSaltTestCase(unittest.TestCase):
             'tag:x': '1',
         })
 
-    def test_get_stack_instances(self):
+    def test_get_stack_instances_running_only(self):
         stack_name = "our-stack"
         cfn = cloudformation.Cloudformation(self.env.aws_profile, 'aws_region')
 
@@ -159,7 +159,11 @@ class BootstrapSaltTestCase(unittest.TestCase):
             'instance-state-name': 'running'
         })
 
-        cfn.filter_stack_instances.reset_mock()
+    def test_get_stack_instances_all(self):
+        stack_name = "our-stack"
+        cfn = cloudformation.Cloudformation(self.env.aws_profile, 'aws_region')
+        cfn.filter_stack_instances = mock.Mock()
+
         cfn.get_stack_instances(stack_name, running_only=False)
         cfn.filter_stack_instances.assert_called_once_with(stack_name, filters={})
 
