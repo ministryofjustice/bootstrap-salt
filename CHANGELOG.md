@@ -1,3 +1,7 @@
+## Version 0.2.1
+
+* Bug fix: missing keyword in get_stack_instances breaks salt.setup
+
 ## Version 0.2.0
 
 * Make it possible to target minions in batches by passing a decimal fraction to the salt_utils script.
