@@ -9,7 +9,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 import bootstrap_cfn.config as config
-from fabric.api import env, task, sudo, put, run
+from fabric.api import env, task, sudo, put, run, local
 from fabric.contrib.project import upload_project
 from bootstrap_cfn.fab_tasks import _validate_fabric_env, \
     get_stack_name, get_config
@@ -66,6 +66,24 @@ def environment(environment_name):
 
 
 @task
+def tag(tag):
+    """
+    Set a tag for the stack
+
+    Sets the environment variable 'tag'
+    This gets used to store a DNS entry to identify
+    multiple stacks with the same name.
+    e.g. you can tag a stack as active, or inactive,
+    green or blue etc.
+
+    Args:
+        tag(string): The string to set the
+        variable to
+    """
+    env.tag = str(tag).lower()
+
+
+@task
 def application(application_name):
     """
     Set the application name
@@ -107,6 +125,37 @@ def get_master_ip():
 
 
 @task
+def swap_masters(tag1, tag2):
+    """
+    Swap two tagged stacks.
+    """
+    cfn_config = get_config()
+    r53_conn = get_connection(R53)
+    try:
+        zone_name = cfn_config.data['master_zone']
+    except KeyError:
+        logging.warn("master_zone not found in config file, "
+                     "so cannot swap master tags as they do "
+                     "not exist. Recreate stacks after adding "
+                     "master zone to the yaml config.")
+        sys.exit(1)
+    zone_id = r53_conn.get_hosted_zone_id(zone_name)
+    master1 = 'master.{0}.{1}.{2}'.format(tag1,
+                                          env.environment,
+                                          env.application)
+    master2 = 'master.{0}.{1}.{2}'.format(tag2,
+                                          env.environment,
+                                          env.application)
+    master_ip_1 = r53_conn.get_record(zone_name, zone_id, master1, 'A')
+    master_ip_2 = r53_conn.get_record(zone_name, zone_id, master2, 'A')
+    fqdn1 = "{0}.{1}".format(master1, zone_name)
+    fqdn2 = "{0}.{1}".format(master2, zone_name)
+    r53_conn.update_dns_record(zone_id, fqdn1, 'A', master_ip_2)
+    r53_conn.update_dns_record(zone_id, fqdn2, 'A', master_ip_1)
+    local('ssh-keygen -R {0}'.format(fqdn1))
+    local('ssh-keygen -R {0}'.format(fqdn2))
+
+
 def find_master():
     """
     Find and return the FQDN of the salt master
@@ -127,9 +176,15 @@ def find_master():
                      "so DNS discovery of master not possible, "
                      "falling back to AWS EC2 API.")
         return get_master_ip()
-    master = 'master.{0}.{1}.{2}'.format(env.environment,
-                                         env.application,
-                                         zone_name)
+    if hasattr(env, 'tag'):
+        master = 'master.{0}.{1}.{2}.{3}'.format(env.tag,
+                                                 env.environment,
+                                                 env.application,
+                                                 zone_name)
+    else:
+        master = 'master.{0}.{1}.{2}'.format(env.environment,
+                                             env.application,
+                                             zone_name)
     return master
 
 
@@ -148,9 +203,15 @@ def set_master_dns():
         return False
     r53 = get_connection(R53)
     zone_id = r53.get_hosted_zone_id(zone_name)
-    dns_name = 'master.{0}.{1}.{2}'.format(env.environment,
-                                           env.application,
-                                           zone_name)
+    if hasattr(env, 'tag'):
+        dns_name = 'master.{0}.{1}.{2}.{3}'.format(env.tag,
+                                                   env.environment,
+                                                   env.application,
+                                                   zone_name)
+    else:
+        dns_name = 'master.{0}.{1}.{2}'.format(env.environment,
+                                               env.application,
+                                               zone_name)
     r53.update_dns_record(zone_id, dns_name, 'A', master_ip)
     return True
 

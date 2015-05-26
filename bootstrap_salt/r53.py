@@ -33,3 +33,15 @@ class R53:
         change.add_value(record_value)
         changes.commit()
         return True
+
+    def get_record(self, zone, zone_id, record, record_type):
+        '''
+        '''
+        fqdn = "{0}.{1}.".format(record, zone)
+        rrsets = self.conn_r53.get_all_rrsets(zone_id, type=record_type, name=fqdn)
+        for rr in rrsets:
+            if rr.type == record_type and rr.name == fqdn:
+                if rr.type == 'TXT':
+                    rr.resource_records[0] = rr.resource_records[0][1:-1]
+                return rr.resource_records[0]
+        return None
