@@ -1,6 +1,9 @@
-## Unreleased
+## Version 0.2.0
 
 * Make it possible to target minions in batches by passing a decimal fraction to the salt_utils script.
+* Upgrade salt to 2014.7.4
+* Make salt version an argument
+* Add docstrings to fab tasks
 * Bug fix: search only running instances
 
 ## Version 0.1.2
