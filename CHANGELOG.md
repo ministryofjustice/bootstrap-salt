@@ -1,3 +1,7 @@
+##
+
+* Make it possible to create multiple stacks with the same app and env.
+
 ## Version 0.2.1
 
 * Bug fix: missing keyword in get_stack_instances breaks salt.setup
