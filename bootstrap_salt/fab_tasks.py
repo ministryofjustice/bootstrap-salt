@@ -11,6 +11,7 @@ logging.basicConfig(level=logging.INFO)
 import bootstrap_cfn.config as config
 from fabric.api import env, task, sudo, put, run, local
 from fabric.contrib.project import upload_project
+import dns.resolver
 from bootstrap_cfn.fab_tasks import _validate_fabric_env, \
     get_stack_name, get_config
 
@@ -176,12 +177,15 @@ def find_master():
                      "so DNS discovery of master not possible, "
                      "falling back to AWS EC2 API.")
         return get_master_ip()
-    if hasattr(env, 'tag'):
+    if not hasattr(env, 'tag'):
+        env.tag = 'active'
+    try:
         master = 'master.{0}.{1}.{2}.{3}'.format(env.tag,
                                                  env.environment,
                                                  env.application,
                                                  zone_name)
-    else:
+        dns.resolver.query(master, 'A')
+    except dns.resolver.NXDOMAIN:
         master = 'master.{0}.{1}.{2}'.format(env.environment,
                                              env.application,
                                              zone_name)
