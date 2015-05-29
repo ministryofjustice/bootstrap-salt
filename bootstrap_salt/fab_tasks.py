@@ -17,7 +17,7 @@ from bootstrap_cfn.fab_tasks import _validate_fabric_env, \
 
 from cloudformation import Cloudformation
 from ec2 import EC2
-from r53 import R53
+from bootstrap_cfn.r53 import R53
 
 from .deploy_lib import github
 

@@ -21,7 +21,8 @@ setup(
         'boto>=2.36.0',
         'bootstrap-cfn>=0.4.1',
         'requests',
-        'ndg-httpsclient'
+        'ndg-httpsclient',
+        'dnspython'
     ],
     setup_requires=[
         'mock>=1.0.1',
