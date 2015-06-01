@@ -106,7 +106,13 @@ The cloudformation yaml will be automatically uploaded to your pillar as cloudfo
 
 Github based SSH key generation
 +++++++++++++++++++++++++++++++
-Add this to your template yaml::
+To add individual users to the AWS stack.
+
+1. to customize the list of users, teams and keys, add the following to the project
+   YAML template; it offers more flexibility: for example multiple keys per user, or limiting
+   to specific keys for users with multiple keys:
+
+::
 
 
     myenv:
@@ -130,9 +136,50 @@ Add this to your template yaml::
                   fingerprints: 00:11:22:33:44:55:66
             - anotherteam
 
-Running this requires a github token with permissions to read the github organisation stored in an environment variable called GH_TOKEN.
-Once you set the variable just run::
+2. in the simplest version, just add the list of teams (all users' keys will be used) 
+   to the projec YAML template
+
+::
+
+
+    github_users:
+      ministryofjustice: # or any org
+        teams:
+          - webops
+          - crime-billing-online
+
+
+3. if a team doesn't exist, create it on GitHub granting "Read" access. Example of a team:
+    https://github.com/orgs/ministryofjustice/teams/webops
+    
+
+4. obtain a GitHub token and set the GH_TOKEN variable in your environment:
+    https://help.github.com/articles/creating-an-access-token-for-command-line-use/
+
+5. run the following command:
+
+::
 
 
     fab application:<yourapp> aws:<your_aws_profile> environment:myenv config:<your template yaml file> ssh_keys
 
+
+6. the above command, if succesful, creates the file 
+   :code:`pillar/<myenv>/keys.sls`  (can be renamed, often as :code:`admins.sls`)
+   
+   Add an entry with the name of this file to 
+   :code:`pillar/<myenv>/top.sls`
+
+
+::
+
+
+       base:
+         'Env:demo':
+           - match: grain
+           - demo
+           - demo-secrets
+           - cloudformation
+           - admins
+
+7. highstate the stack
