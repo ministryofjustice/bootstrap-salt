@@ -4,8 +4,11 @@ import os
 from StringIO import StringIO
 import sys
 import random
+import string
 import yaml
+from tempfile import mkdtemp
 import logging
+import pkgutil
 logging.basicConfig(level=logging.INFO)
 
 import bootstrap_cfn.config as config
@@ -18,6 +21,7 @@ from bootstrap_cfn.fab_tasks import _validate_fabric_env, \
 from cloudformation import Cloudformation
 from ec2 import EC2
 from bootstrap_cfn.r53 import R53
+import bootstrap_salt
 
 from .deploy_lib import github
 
@@ -115,6 +119,10 @@ def get_connection(klass):
     _validate_fabric_env()
     return klass(env.aws, env.aws_region)
 
+@task
+def mmb1():
+    stack_name = get_stack_name()
+    print stack_name
 
 def get_master_ip():
     _validate_fabric_env()
@@ -304,6 +312,7 @@ def rsync():
     by salt-shaker.
     """
     _validate_fabric_env()
+    stack_name = get_stack_name()
     work_dir = os.path.dirname(env.real_fabfile)
     project_config = config.ProjectConfig(env.config,
                                           env.environment,
@@ -328,35 +337,67 @@ def rsync():
     remote_state_dir = salt_cfg.get('remote_state_dir', '/srv/salt')
     remote_pillar_dir = salt_cfg.get('remote_pillar_dir', '/srv/pillar')
 
-    master_ip = find_master()
-    env.host_string = '{0}@{1}'.format(env.user, master_ip)
-    put_util_script()
-    sudo('mkdir -p {0}'.format(remote_state_dir))
-    sudo('mkdir -p {0}'.format(remote_pillar_dir))
-    upload_project(
-        remote_dir=remote_state_dir,
-        local_dir=os.path.join(local_vendor_dir, '_root', '.'),
-        use_sudo=True)
-    upload_project(
-        remote_dir='/srv/',
-        local_dir=os.path.join(local_vendor_dir, 'formula-repos'),
-        use_sudo=True)
-    upload_project(
-        remote_dir=remote_state_dir,
-        local_dir=local_salt_dir,
-        use_sudo=True)
-    upload_project(
-        remote_dir=remote_pillar_dir,
-        local_dir=os.path.join(local_pillar_dir, env.environment, '.'),
-        use_sudo=True)
-    cf_sls = StringIO(yaml.dump(cfg))
-    put(
-        remote_path=os.path.join(
-            remote_pillar_dir,
-            'cloudformation.sls'),
-        local_path=cf_sls,
-        use_sudo=True)
+    vendor_root = os.path.join(local_vendor_dir, '_root', '.')
+    bs_path = os.path.dirname(pkgutil.get_loader('bootstrap_salt').filename)
+    dirs = {local_salt_dir:[remote_state_dir],
+            local_pillar_dir:[remote_pillar_dir],
+            vendor_root:[remote_state_dir, '/srv/formula-repos'],
+            '{0}/contrib/etc/salt'.format(bs_path): ['/etc'],
+            '{0}/bootstrap_salt/salt_utils.py'.format(bs_path):
+            ['/usr/local/bin/']}
+    tmp_folder = mkdtemp()
+    for local_dir, dest_dirs in dirs.items():
+        for dest_dir in dest_dirs:
+            dest = os.path.join(tmp_folder, ".{0}".format(dest_dir))
+            local("mkdir -p {0}".format(dest))
+            local("cp -r {0} {1}".format(local_dir, dest))
+    local("tar -czvf ./srv.tar -C {0} .".format(tmp_folder))
+    #local("rm -rf {0}".format(tmp_folder))
+    #encrypt_file('./srv.tar')
+    #local("rm -rf ./srv.tar")
+    #local("aws s3 --profile {0} cp ./srv.tar.gpg s3://{1}-salt/".format(env.aws,
+    #    stack_name))
+    #local("rm -rf ./srv.tar.gpg")
 
+            #local("tar -rf ./srv.tar -s {0}{1}/".format(local_dir, dest_dir))
+    #put_util_script()
+    #sudo('mkdir -p {0}'.format(remote_state_dir))
+    #sudo('mkdir -p {0}'.format(remote_pillar_dir))
+    #upload_project(
+    #    remote_dir=remote_state_dir,
+    #    local_dir=os.path.join(local_vendor_dir, '_root', '.'),
+    #    use_sudo=True)
+    #upload_project(
+    #    remote_dir='/srv/',
+    #    local_dir=os.path.join(local_vendor_dir, 'formula-repos'),
+    #    use_sudo=True)
+    #upload_project(
+    #    remote_dir=remote_state_dir,
+    #    local_dir=local_salt_dir,
+    #    use_sudo=True)
+    #upload_project(
+    #    remote_dir=remote_pillar_dir,
+    #    local_dir=os.path.join(local_pillar_dir, env.environment, '.'),
+    #    use_sudo=True)
+    #cf_sls = StringIO(yaml.dump(cfg))
+    #put(
+    #    remote_path=os.path.join(
+    #        remote_pillar_dir,
+    #        'cloudformation.sls'),
+    #    local_path=cf_sls,
+    #    use_sudo=True)
+
+@task
+def encrypt_file(file_name):
+    try:
+        with open('./s3-secrets-key.yaml') as f:
+            key = yaml.load(f)['key']
+    except IOError:
+        with open('./s3-secrets-key.yaml', 'w') as f:
+            key = ''.join(random.SystemRandom().choice(string.ascii_uppercase +
+                string.digits) for _ in range(64))
+            yaml.dump({'key': key}, f)
+    local('gpg --yes --output {1}.gpg --passphrase {0} --symmetric {1}'.format(key, file_name))
 
 @task(alias='ssh_keys')
 def generate_ssh_key_pillar(force=False, strict=True):
