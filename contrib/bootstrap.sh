@@ -7,7 +7,7 @@ pip install gnupg
 cd /tmp
 git clone https://github.com/ministryofjustice/bootstrap-salt.git
 cd ./bootstrap-salt
-git checkout $BOOTSTRAP_SALT_REV
+git checkout remove-salt-master
 cp -Lrf ./contrib/* /
 /tmp/bootstrap-salt.sh git v2014.7.5
 salt-call saltutil.sync_all

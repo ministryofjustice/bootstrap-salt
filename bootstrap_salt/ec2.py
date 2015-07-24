@@ -21,6 +21,10 @@ class EC2:
             aws_region_name=aws_region_name
         )
 
+    def get_stack_instance_public_ips(self, stack_name):
+        instance_ids = self.cfn.get_stack_instance_ids(stack_name)
+        return self.get_instance_public_ips(instance_ids)
+
     def get_instance_public_ips(self, instance_id_list):
         if not instance_id_list:
             return []
