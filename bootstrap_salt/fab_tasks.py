@@ -22,6 +22,7 @@ from cloudformation import Cloudformation
 from ec2 import EC2
 from bootstrap_cfn.r53 import R53
 import bootstrap_salt
+from bootstrap_salt.config import MyConfigParser
 
 from .deploy_lib import github
 
@@ -35,8 +36,11 @@ RETRY_INTERVAL = 10
 path = env.real_fabfile or os.getcwd()
 sys.path.append(os.path.dirname(path))
 
-
 env.stack = None
+# This overrides the config parser in bootstrap-cfn
+# this allows us to inject extra userdata into the launch
+# config of the auto scaling groups
+env.cloudformation_parser = MyConfigParser
 
 
 @task
