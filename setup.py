@@ -22,7 +22,8 @@ setup(
         'bootstrap-cfn>=0.5.1',
         'requests',
         'ndg-httpsclient',
-        'dnspython'
+        'dnspython',
+        'gnupg'
     ],
     setup_requires=[
         'mock>=1.0.1',

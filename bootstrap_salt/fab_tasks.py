@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import math
 import os
 import sys
 import yaml
@@ -154,6 +155,22 @@ def get_instance_ips():
     instance_ids = [i.id for i in instance_ids]
     instance_ips = ec2.get_instance_public_ips(instance_ids)
     return instance_ips
+
+
+def get_ips_batch(fraction=None):
+    '''
+    Takes a list of ips and batches them
+    in the format [['ip1','ip2']]
+    If a fraction is specified the ips are split into batches sized by
+    that fraction i.e. 4 ips with fraction=0.5 will return:
+    [['ip1', 'ip2'],['ip3','ip4']]
+    '''
+    ips = ["{0}@{1}".format(env.user, i) for i in get_instance_ips()]
+    if fraction:
+        number_in_batch = int(math.ceil(len(ips)*float(fraction)))
+        return [ips[i:i+number_in_batch] for i in xrange(0, len(ips), number_in_batch)]
+    else:
+        return [ips]
 
 
 @task
