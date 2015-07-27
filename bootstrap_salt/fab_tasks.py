@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import math
 import os
 import sys
 import yaml
@@ -151,6 +152,22 @@ def get_instance_ips():
     ec2 = get_connection(EC2)
     stack_name = get_stack_name()
     return ec2.get_stack_instance_public_ips(stack_name)
+
+
+def get_ips_batch(fraction=None):
+    '''
+    Takes a list of ips and batches them
+    in the format [['ip1','ip2']]
+    If a fraction is specified the ips are split into batches sized by
+    that fraction i.e. 4 ips with fraction=0.5 will return:
+    [['ip1', 'ip2'],['ip3','ip4']]
+    '''
+    ips = get_instance_ips()
+    if fraction:
+        number_in_batch = int(math.ceil(len(ips)*float(fraction)))
+        return [ips[i:i+number_in_batch] for i in xrange(0, len(ips), number_in_batch)]
+    else:
+        return [ips]
 
 
 @task
