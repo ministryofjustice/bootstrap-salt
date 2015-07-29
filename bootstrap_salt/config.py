@@ -1,4 +1,5 @@
 import os
+import pkg_resources
 import pkgutil
 
 import bootstrap_cfn.config
@@ -10,6 +11,7 @@ import yaml
 
 class MyConfigParser(bootstrap_cfn.config.ConfigParser):
 
+    __version__ = pkg_resources.get_distribution("bootstrap_salt").version
     def base_template(self):
         ret = super(MyConfigParser, self).base_template()
         ret.add_mapping('KMS', {'salt': {'key': env.kms_key_id}})
@@ -29,7 +31,11 @@ class MyConfigParser(bootstrap_cfn.config.ConfigParser):
                                   'owner': 'root:root',
                                   'path': '/tmp/bootstrap.sh',
                                   'permissions': '0700'}]}
-
+        commands = {'runcmd': ['/tmp/bootstrap.sh v{0}'.format(__version__)]}
+        ret.append({
+            'content': yaml.dump(commands),
+            'mime_type': 'text/cloud-config'
+        })
         ret.append({
             'content': yaml.dump(files),
             'mime_type': 'text/cloud-config'
