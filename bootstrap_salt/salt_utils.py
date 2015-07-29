@@ -51,8 +51,8 @@ def get_salt_data():
     if not tar_file and not os.path.isfile('/srv.tar'):
         print "Salt tar not found, probably this is an initial bootstrap"
         sys.exit(0)
-    shutil.rmtree('/srv/salt')
-    shutil.rmtree('/srv/pillar')
+    shutil.rmtree('/srv/salt', ignore_errors=True)
+    shutil.rmtree('/srv/pillar', ignore_errors=True)
     subprocess.call(['tar', '--no-same-owner', '-xvf', '/srv.tar', '-C', '/'])
 
 
