@@ -148,13 +148,9 @@ def get_instance_ips():
     """
     Get a list of the public IPs of the current instances in the stack.
     """
-    cf = get_connection(Cloudformation)
     ec2 = get_connection(EC2)
     stack_name = get_stack_name()
-    instance_ids = cf.get_stack_instances(stack_name)
-    instance_ids = [i.id for i in instance_ids]
-    instance_ips = ec2.get_instance_public_ips(instance_ids)
-    return instance_ips
+    return ec2.get_stack_instance_public_ips(stack_name)
 
 
 def get_ips_batch(fraction=None):

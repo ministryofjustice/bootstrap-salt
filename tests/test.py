@@ -1,6 +1,8 @@
 import tempfile
 import unittest
+from testfixtures import compare
 import mock
+from mock import patch
 import yaml
 import boto.cloudformation
 import boto.ec2.autoscale
@@ -86,6 +88,15 @@ class BootstrapSaltTestCase(unittest.TestCase):
         self.cfn_conn_mock = mock.Mock(name='cf_connect')
         cfn_mock.return_value = self.cfn_conn_mock
         boto.cloudformation.connect_to_region = cfn_mock
+
+    def test_get_stack_instance_public_ips(self):
+        cfn = cloudformation.Cloudformation(self.env.aws_profile, 'aws_region')
+        cloudformation.Cloudformation.get_stack_instance_ids = mock.Mock()
+        ec = ec2.EC2(self.env.aws_profile, 'aws_region')
+        with patch.object(ec, 'get_instance_public_ips', return_value=['1.1.1.1', '2.2.2.2']):
+            x = ec.get_stack_instance_public_ips('mock-stack-name')
+            cfn.get_stack_instance_ids.assert_called_with('mock-stack-name')
+            compare(x, ['1.1.1.1', '2.2.2.2'])
 
     def test_get_stack_id(self):
         stack_id = "arn:aws:cloudformation:eu-west-1:123/stack-name/uuid"
