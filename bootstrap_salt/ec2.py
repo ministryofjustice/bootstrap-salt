@@ -58,33 +58,6 @@ class EC2:
         resv = self.conn_ec2.get_all_reservations([inst_id])
         return [i for r in resv for i in r.instances][0] if resv else None
 
-    def get_master_instance(self, stack_name_or_id):
-        instances = self.cfn.get_stack_instances(
-            stack_name_or_id,
-            filters={'tag-key': 'SaltMaster'})
-        return instances[0] if len(instances) else None
-
-    def get_unconfigured_minions(self, stack_name_or_id, master_ip):
-        """
-        Get a list of all instances that need salt_master configuring.
-
-        We define configuring as:
-
-        - They haven't had salt installed (which would be the case when there
-          is no 'SaltMasterPrvIP' tag
-        - They are speaking to the wrong master (which would be if the salt
-          master had to be re-built)
-
-        """
-        instances = self.cfn.get_stack_instances(stack_name_or_id)
-        unconfigured = []
-        for i in instances:
-            if i.tags.get('SaltMasterPrvIP', '') == master_ip or i.tags.get('SaltMaster', ''):
-                continue
-
-            unconfigured.append(i)
-        return unconfigured
-
     def is_ssh_up_on_all_instances(self, stack_id):
         """
         Returns False if no instances found
