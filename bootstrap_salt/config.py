@@ -1,4 +1,5 @@
 import os
+import pkg_resources
 import pkgutil
 
 from bootstrap_cfn.config import ConfigParser
@@ -16,6 +17,7 @@ class MyConfigParser(ConfigParser):
         return ret
 
     def get_ec2_userdata(self):
+        self.__version__ = pkg_resources.get_distribution("bootstrap_salt").version
         ret = super(MyConfigParser, self).get_ec2_userdata()
 
         bs_path = os.path.dirname(pkgutil.get_loader('bootstrap_salt').filename)
@@ -29,7 +31,11 @@ class MyConfigParser(ConfigParser):
                                   'owner': 'root:root',
                                   'path': '/tmp/bootstrap.sh',
                                   'permissions': '0700'}]}
-
+        commands = {'runcmd': ['/tmp/bootstrap.sh v{0}'.format(self.__version__)]}
+        ret.append({
+            'content': yaml.dump(commands),
+            'mime_type': 'text/cloud-config'
+        })
         ret.append({
             'content': yaml.dump(files),
             'mime_type': 'text/cloud-config'
