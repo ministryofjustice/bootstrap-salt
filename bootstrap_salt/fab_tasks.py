@@ -279,6 +279,9 @@ def upload_salt():
     local("rm -rf {0}".format(tmp_folder))
 
     env.host_string = '{0}@{1}'.format(env.user, get_instance_ips()[0])
+    # Here we get the encypted data key for this specific stack, we then use
+    # KMS to get the plaintext key and use that key to encrypt the salt content
+    # We get the key over SSH because it is unique to each stack.
     get(remote_path='/etc/salt.key.enc', local_path='./', use_sudo=True)
     encrypt_file('./srv.tar')
     local("rm ./salt.key.enc")
