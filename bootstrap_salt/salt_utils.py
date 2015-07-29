@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import base64
 import logging
+import os
 import subprocess
 import sys
 
@@ -30,20 +31,28 @@ def get_salt_data():
     import boto.s3
     import boto.kms
     import gnupg
+    import shutil
+
     caller = salt.client.Caller()
     stack_name = caller.function('grains.item', 'aws:cloudformation:stack-name')['aws:cloudformation:stack-name']
     region = caller.function('grains.item', 'aws_region')['aws_region']
     kms = boto.kms.connect_to_region(region)
     s3 = boto.s3.connect_to_region(region)
     tar_file = s3.get_bucket('{0}-salt'.format(stack_name)).get_key('srv.tar.gpg')
-    if not tar_file:
+    if tar_file:
+        tar_file.get_contents_to_filename('/srv.tar.gpg')
+        os.chmod('/srv.tar.gpg', 0700)
+        key = kms.decrypt(open('/etc/salt.key.enc').read())['Plaintext']
+        key = base64.b64encode(key)
+        gpg = gnupg.GPG()
+        gpg.decrypt_file(open('/srv.tar.gpg'), passphrase=key,
+                         output='/srv.tar')
+        os.chmod('/srv.tar', 0700)
+    if not tar_file and not os.path.isfile('/srv.tar'):
+        print "Salt tar not found, probably this is an initial bootstrap"
         sys.exit(0)
-    tar_file.get_contents_to_filename('/srv.tar.gpg')
-    key = kms.decrypt(open('/etc/salt.key.enc').read())['Plaintext']
-    key = base64.b64encode(key)
-    gpg = gnupg.GPG()
-    gpg.decrypt_file(open('/srv.tar.gpg'), passphrase=key,
-                     output='/srv.tar')
+    shutil.rmtree('/srv/salt', ignore_errors=True)
+    shutil.rmtree('/srv/pillar', ignore_errors=True)
     subprocess.call(['tar', '--no-same-owner', '-xvf', '/srv.tar', '-C', '/'])
 
 

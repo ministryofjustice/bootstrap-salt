@@ -23,6 +23,7 @@ setup(
         'requests',
         'ndg-httpsclient',
         'dnspython',
+        'awscli',
         'gnupg'
     ],
     setup_requires=[

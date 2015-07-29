@@ -258,6 +258,7 @@ def upload_salt():
     dirs = {local_salt_dir: [remote_state_dir],
             local_pillar_dir: [remote_pillar_dir],
             vendor_root: [remote_state_dir, '/srv/formula-repos'],
+            '{0}/contrib/srv/salt/_grains'.format(bs_path): [remote_state_dir],
             '{0}/contrib/etc/salt'.format(bs_path): ['/etc'],
             '{0}/bootstrap_salt/salt_utils.py'.format(bs_path):
             ['/usr/local/bin/']
@@ -272,6 +273,8 @@ def upload_salt():
     with open(os.path.join(cfg_path, 'cloudformation.sls'), 'w') as cfg_file:
         yaml.dump(cfg, cfg_file)
     local("chmod -R 755 {0}".format(tmp_folder))
+    local("chmod -R 700 {0}{1}".format(tmp_folder, remote_state_dir))
+    local("chmod -R 700 {0}{1}".format(tmp_folder, remote_pillar_dir))
     local("tar -czvf ./srv.tar -C {0} .".format(tmp_folder))
     local("rm -rf {0}".format(tmp_folder))
 
@@ -287,6 +290,7 @@ def upload_salt():
     local("aws s3 --profile {0} cp ./srv.tar.gpg s3://{1}-salt/".format(env.aws,
           stack_name))
     local("rm -rf ./srv.tar.gpg")
+
 
 @task
 def encrypt_file(file_name):
