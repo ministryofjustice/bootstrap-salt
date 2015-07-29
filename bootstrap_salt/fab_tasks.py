@@ -13,6 +13,7 @@ logging.basicConfig(level=logging.INFO)
 
 import bootstrap_cfn.config as config
 from fabric.api import env, task, run, local, settings, get
+from fabric.contrib import files
 from bootstrap_cfn.fab_tasks import _validate_fabric_env, \
     get_stack_name, get_config, cfn_create
 
@@ -185,6 +186,7 @@ def wait_for_minions(timeout=600, interval=20):
     print "Waiting for SSH on all instances..."
     ec2.wait_for_ssh(stack_name)
     fab_hosts = get_instance_ips()
+    print "Waiting for bootstrap script to finish on all instances..."
     utils.timeout(timeout, interval)(is_bootstrap_done)(fab_hosts)
 
 
@@ -197,15 +199,10 @@ def is_bootstrap_done(hosts):
     Args:
         hosts(list): A list of IPs to check
     """
-    with settings(warn_only=True):
-        ret = []
-        for host in hosts:
-            env.host_string = '{0}@{1}'.format(env.user, host)
-            res = run('[ -f /tmp/bootstrap_done ]')
-            if res.return_code == 0:
-                ret.append(True)
-            else:
-                ret.append(False)
+    ret = []
+    for host in hosts:
+        env.host_string = '{0}@{1}'.format(env.user, host)
+        ret.append(files.exists('/tmp/bootstrap_done'))
     return all(ret)
 
 
