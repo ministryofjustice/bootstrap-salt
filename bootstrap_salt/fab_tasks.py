@@ -272,6 +272,8 @@ def upload_salt():
     with open(os.path.join(cfg_path, 'cloudformation.sls'), 'w') as cfg_file:
         yaml.dump(cfg, cfg_file)
     local("chmod -R 755 {0}".format(tmp_folder))
+    local("chmod -R 700 {0}{1}".format(tmp_folder, remote_state_dir))
+    local("chmod -R 700 {0}{1}".format(tmp_folder, remote_pillar_dir))
     local("tar -czvf ./srv.tar -C {0} .".format(tmp_folder))
     local("rm -rf {0}".format(tmp_folder))
 
