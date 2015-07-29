@@ -12,12 +12,11 @@ import base64
 logging.basicConfig(level=logging.INFO)
 
 import bootstrap_cfn.config as config
-from fabric.api import env, task, run, local, settings, get
+from fabric.api import env, task, local, get
 from fabric.contrib import files
 from bootstrap_cfn.fab_tasks import _validate_fabric_env, \
     get_stack_name, get_config, cfn_create
 
-from cloudformation import Cloudformation
 from ec2 import EC2
 from bootstrap_salt.kms import KMS
 import bootstrap_salt.utils as utils
