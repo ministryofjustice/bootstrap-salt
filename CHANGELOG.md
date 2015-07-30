@@ -1,3 +1,7 @@
+## UNRELEASED
+
+* Set a grain showing the installed salt formulas and versions
+
 ## Version 0.2.2
 
 * Make it possible to create multiple stacks with the same app and env.

@@ -358,6 +358,42 @@ def rsync():
         use_sudo=True)
 
 
+@task
+def set_formulas_grain(requirements_file="formula-requirements.txt"):
+    """
+    Set the salt-formulas grain to be a dictionary of installed formulas and their versions
+
+    Args:
+        requirements_file(string): The pathname to the file containing the formula requirements
+    """
+    import re
+    import json
+
+    # Find the master to set the grain on
+    master_ip = find_master()
+    env.host_string = '{0}@{1}'.format(env.user, master_ip)
+
+    # Our default is to set the grain to the empty dictionary
+    requirements = {}
+    # If we have the requirements file, use the data from that
+    if os.path.isfile(requirements_file):
+        with open(requirements_file) as ifs:
+            for line in ifs:
+                match = re.search('([^=]+)[=]+(.*)', line)
+                if len(match.groups()) >= 2:
+                    name = match.group(1)
+                    version = match.group(2)
+                    requirements[name] = version
+
+    # Set the salt masters installed formulas grain
+    salt_formulas_key = "salt-formulas"
+    salt_formulas_value = json.dumps(requirements)
+    salt_command = ("/usr/bin/salt \* grains.setval '%s' '%s'"
+                    % (salt_formulas_key,
+                       salt_formulas_value))
+    sudo(salt_command, shell=False)
+
+
 @task(alias='ssh_keys')
 def generate_ssh_key_pillar(force=False, strict=True):
     """
@@ -400,7 +436,7 @@ def generate_ssh_key_pillar(force=False, strict=True):
 
     if strict and current_admins:
         to_be_removed = current_admins - set(ssh_key_data.keys())
-        if (float(len(to_be_removed))/float(len(current_admins))) * 100 > 50.00:
+        if (float(len(to_be_removed)) / float(len(current_admins))) * 100 > 50.00:
             print 'WARNING: Removing more than 50% of the current users.'
         for absent_user in to_be_removed:
             print 'Setting {} to absent.'.format(absent_user)
