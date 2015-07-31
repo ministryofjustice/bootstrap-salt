@@ -4,12 +4,14 @@ from testfixtures import compare
 import mock
 from mock import patch
 import yaml
+import json
 import boto.cloudformation
 import boto.ec2.autoscale
 import paramiko
 from bootstrap_salt import cloudformation
 from bootstrap_salt import ec2
 from bootstrap_salt import ssh
+from bootstrap_salt import fab_tasks
 from paramiko.ssh_exception import AuthenticationException
 import socket
 import os
@@ -254,20 +256,67 @@ class BootstrapSaltTestCase(unittest.TestCase):
     def test_is_ssh_up(self):
         mock_p = mock.Mock()
         mock_client = mock.Mock()
-        mock_config = {'connect.side_effect':AuthenticationException}
+        mock_config = {'connect.side_effect': AuthenticationException}
         mock_client.configure_mock(**mock_config)
-        mock_p.return_value = mock_client 
+        mock_p.return_value = mock_client
         paramiko.SSHClient = mock_p
         self.assertTrue(ssh.is_ssh_up('1.1.1.1'))
 
     def test_is_ssh_not_up(self):
         mock_p = mock.Mock()
         mock_client = mock.Mock()
-        mock_config = {'connect.side_effect':socket.error}
+        mock_config = {'connect.side_effect': socket.error}
         mock_client.configure_mock(**mock_config)
-        mock_p.return_value = mock_client 
+        mock_p.return_value = mock_client
         paramiko.SSHClient = mock_p
         self.assertFalse(ssh.is_ssh_up('1.1.1.1'))
+
+    @patch('json.loads')
+    @patch('bootstrap_salt.fab_tasks.sudo')
+    @patch("bootstrap_salt.fab_tasks.get_instance_ips")
+    def test_check_formulas_exist(self,
+                                  mock_get_instance_ips,
+                                  mock_sudo,
+                                  mock_json_loads
+                                  ):
+        """
+        Test checking for admins when we have some in pillar
+        """
+        mock_get_instance_ips.return_value = ["some-ip", "someother-ip"]
+        mock_sudo.return_value = None
+        mock_json_loads.return_value = {
+            'local': {
+                'john': {},
+                'paul': {},
+                'george': {},
+                'ringo': {}
+            }
+        }
+        json.loads
+        success = fab_tasks.check_admins_exist()
+        msg = "test:test_check_formulas_exist: Did not return successfully"
+        self.assertTrue(success, msg)
+
+    @patch('json.loads')
+    @patch('bootstrap_salt.fab_tasks.sudo')
+    @patch("bootstrap_salt.fab_tasks.get_instance_ips")
+    def test_check_formulas_exist_no_admins(self,
+                                            mock_get_instance_ips,
+                                            mock_sudo,
+                                            mock_json_loads
+                                            ):
+        """
+        Test checking for admins when we have none in pillar
+        """
+        mock_get_instance_ips.return_value = ["some-ip", "someother-ip"]
+        mock_sudo.return_value = None
+        mock_json_loads.return_value = {
+            'local': {}
+        }
+        json.loads
+        success = fab_tasks.check_admins_exist()
+        msg = "test:test_check_formulas_exist: Did not return successfully"
+        self.assertFalse(success, msg)
 
     def tearDown(self):
         ssh.is_ssh_up = self.real_is_ssh_up

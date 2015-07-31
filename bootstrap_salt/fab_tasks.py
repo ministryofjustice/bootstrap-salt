@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from functools import wraps
+import json
 import math
 import os
 from pipes import quote
@@ -16,7 +17,7 @@ import shutil
 logging.basicConfig(level=logging.INFO)
 
 import bootstrap_cfn.config as config
-from fabric.api import env, task, local, get, settings
+from fabric.api import env, task, local, get, settings, sudo
 from fabric.contrib import files
 from bootstrap_cfn.fab_tasks import _validate_fabric_env, \
     get_stack_name, get_config, cfn_create, cfn_delete
@@ -176,8 +177,8 @@ def get_ips_batch(fraction=None):
     '''
     ips = get_instance_ips()
     if fraction:
-        number_in_batch = int(math.ceil(len(ips)*float(fraction)))
-        return [ips[i:i+number_in_batch] for i in xrange(0, len(ips), number_in_batch)]
+        number_in_batch = int(math.ceil(len(ips) * float(fraction)))
+        return [ips[i: (i + number_in_batch)] for i in xrange(0, len(ips), number_in_batch)]
     else:
         return [ips]
 
@@ -403,7 +404,7 @@ def generate_ssh_key_pillar(force=False, strict=True):
 
     if strict and current_admins:
         to_be_removed = current_admins - set(ssh_key_data.keys())
-        if (float(len(to_be_removed))/float(len(current_admins))) * 100 > 50.00:
+        if (float(len(to_be_removed)) / float(len(current_admins))) * 100 > 50.00:
             print 'WARNING: Removing more than 50% of the current users.'
         for absent_user in to_be_removed:
             print 'Setting {} to absent.'.format(absent_user)
@@ -411,3 +412,40 @@ def generate_ssh_key_pillar(force=False, strict=True):
 
     result = {'admins': ssh_key_data}
     yaml.dump(result, open(pillar_file, 'w'), default_flow_style=False)
+
+
+@task
+def check_admins_exist():
+    """
+    Check that we have set some admins in the pillar, exit with error code 1 if not
+
+    Return:
+        bool: True if admins exist in the pillars of all available instances,
+            False otherwise
+    """
+    # Find all instance ips and check admins on all of them. If one
+    # instance lacks admins then the check fails
+    host_ips = get_instance_ips()
+    for host_ip in host_ips:
+        # Create a host string for the instance
+        host = '{0}@{1}'.format(env.user, host_ip)
+        env.host_string = host
+        # Load the admins pillar data
+        admins_json = sudo('/usr/bin/salt-call pillar.get admins --out=json 2> /dev/null',
+                           shell=False)
+        admins_dict = json.loads(admins_json).get('local', {})
+        # If we have no admins data in 'local' then we have no admins
+        # We also assume that we have admins if we have *any* data, a
+        # simplistic test
+        if len(admins_dict) <= 0:
+            link = "https://github.com/ministryofjustice/bootstrap-salt#github-based-ssh-key-generation"
+            logging.error(("check_admins_exist: No admins found in pillar on host '%s', "
+                           "please create them, see '%s'. "
+                           "Default user removal will be skipped until admins are set."
+                           % (host_ip, link)))
+            return False
+
+        logging.info(("check_admins_exist: Found admins '%s' on host '%s'"
+                      % (', '.join(admins_dict.keys()),
+                         host_ip)))
+    return True
