@@ -1,3 +1,7 @@
+##UNRELEASED
+
+* Automatically remove default users
+
 ## Version 0.2.2
 
 * Make it possible to create multiple stacks with the same app and env.

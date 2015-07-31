@@ -5,6 +5,7 @@ from StringIO import StringIO
 import sys
 import random
 import yaml
+import json
 import logging
 logging.basicConfig(level=logging.INFO)
 
@@ -408,3 +409,19 @@ def generate_ssh_key_pillar(force=False, strict=True):
 
     result = {'admins': ssh_key_data}
     yaml.dump(result, open(pillar_file, 'w'), default_flow_style=False)
+
+
+@task
+def check_admins_exist():
+    """
+    Check that we have set some admins in the pillar, exit with error code 1 if not
+    """
+    env.host_string = '{0}@{1}'.format(env.user, find_master())
+    admins_json = sudo('/usr/bin/salt-call pillar.get admins --out=json 2> /dev/null', shell=False)
+    admins_list = json.loads(admins_json).get('local', {}).keys()
+    if not len(admins_list) > 0:
+        logging.error(("check_admins_exist: No admins found in pillar, please create them, see '%s'"
+            % ('https://github.com/ministryofjustice/bootstrap-salt#github-based-ssh-key-generation')))
+        sys.exit(1)
+    logging.info(("check_admins_exist: Found admins in pillar, '%s'"
+                % (', '.join(admins_list))))
