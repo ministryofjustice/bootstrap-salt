@@ -1,6 +1,8 @@
 import tempfile
 import unittest
+from testfixtures import compare
 import mock
+from mock import patch
 import yaml
 import boto.cloudformation
 import boto.ec2.autoscale
@@ -86,6 +88,15 @@ class BootstrapSaltTestCase(unittest.TestCase):
         self.cfn_conn_mock = mock.Mock(name='cf_connect')
         cfn_mock.return_value = self.cfn_conn_mock
         boto.cloudformation.connect_to_region = cfn_mock
+
+    def test_get_stack_instance_public_ips(self):
+        cfn = cloudformation.Cloudformation(self.env.aws_profile, 'aws_region')
+        cloudformation.Cloudformation.get_stack_instance_ids = mock.Mock()
+        ec = ec2.EC2(self.env.aws_profile, 'aws_region')
+        with patch.object(ec, 'get_instance_public_ips', return_value=['1.1.1.1', '2.2.2.2']):
+            x = ec.get_stack_instance_public_ips('mock-stack-name')
+            cfn.get_stack_instance_ids.assert_called_with('mock-stack-name')
+            compare(x, ['1.1.1.1', '2.2.2.2'])
 
     def test_get_stack_id(self):
         stack_id = "arn:aws:cloudformation:eu-west-1:123/stack-name/uuid"
@@ -239,32 +250,6 @@ class BootstrapSaltTestCase(unittest.TestCase):
 
         self.assertFalse(ec.is_ssh_up_on_all_instances(self.stack_name))
         ssh_mock.assert_has_calls([mock.call('1.2.3.4'), mock.call('2.3.4.5')])
-
-    def test_get_unconfigured_minions(self):
-        ec = ec2.EC2(self.env.aws_profile)
-
-        master_prv_ip = '10.0.0.1'
-
-        master = mock.Mock(name="MockInstanceMaster")
-        type(master).tags = mock.PropertyMock(return_value={'SaltMaster': 'True', 'SaltMasterPrvIP': master_prv_ip})
-
-        # An unconfigured minion
-        minion_1 = mock.Mock(name="MockInstance1")
-        type(minion_1).tags = mock.PropertyMock(return_value={})
-
-        # To the wrong master
-        minion_2 = mock.Mock(name="MockInstance2")
-        type(minion_2).tags = mock.PropertyMock(return_value={'SaltMasterPrvIP': '10.0.0.2'})
-
-        # Correctly
-        minion_3 = mock.Mock(name="MockInstance3")
-        type(minion_3).tags = mock.PropertyMock(return_value={'SaltMasterPrvIP': master_prv_ip})
-
-        ec.cfn.get_stack_instances = mock.Mock(return_value=[master, minion_1, minion_2, minion_3])
-
-        got = ec.get_unconfigured_minions(self.stack_name, master_prv_ip)
-        expected = [minion_1, minion_2]
-        self.assertEqual(got, expected)
 
     def test_is_ssh_up(self):
         mock_p = mock.Mock()

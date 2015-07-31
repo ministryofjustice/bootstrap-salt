@@ -1,0 +1,115 @@
+#!/usr/bin/env python
+
+import sys
+import boto.ec2
+import boto.cloudformation
+import boto.ec2.autoscale
+from boto.exception import BotoServerError
+import urllib2
+import time
+import random
+
+
+def get_aws_metadata():
+    metadata_ip = '169.254.169.254'
+    try:
+        instance_id = urllib2.urlopen(
+            'http://{0}/latest/meta-data/instance-id'.format(metadata_ip)).read().strip()
+        region = urllib2.urlopen(
+            'http://{0}/latest/meta-data/placement/availability-zone'.format(metadata_ip)).read().strip()[:-1]
+        return {'aws_instance_id': instance_id, 'aws_region': region}
+    except Exception as err:
+        sys.stderr.write('tags_to_grains ERROR: %s\n' % str(err))
+        return {'custom_grain_error': True}
+
+
+def get_cf_data(attempt=0):
+    try:
+        md = get_aws_metadata()
+        conn = boto.cloudformation.connect_to_region(md['aws_region'])
+        tags = get_ec2_data()
+        stack_name = tags['aws:cloudformation:stack-name']
+        stack_outputs = conn.describe_stacks(stack_name)[0].outputs
+        out = {}
+        [out.update({o.key: o.value}) for o in stack_outputs]
+        return out
+    except BotoServerError:
+        if attempt > 5:
+            return {'custom_grain_error': True}
+        time.sleep(random.randint(1, 5))
+        attempt = attempt + 1
+        return get_cf_data(attempt)
+    except Exception as err:
+        sys.stderr.write('tags_to_grains ERROR: %s\n' % str(err))
+        return {'custom_grain_error': True}
+
+
+def get_ec2_data(attempt=0):
+    """
+    This retrieves ec2 data for the instance e.g
+    Project: courtfinder
+    Role: docker
+    Apps: search,admin
+    Env: dev
+
+    To transform this data into salt grains run:
+    ``salt '*' saltutil.sync_all``
+    """
+
+    try:
+        md = get_aws_metadata()
+        conn = boto.ec2.connect_to_region(md['aws_region'])
+        instance = conn.get_all_instances(
+            instance_ids=[md['aws_instance_id']])[0].instances[0]
+        return instance.tags
+    except BotoServerError:
+        if attempt > 5:
+            return {'custom_grain_error': True}
+        time.sleep(random.randint(1, 5))
+        attempt = attempt + 1
+        return get_ec2_data(attempt)
+    except Exception as err:
+        sys.stderr.write('tags_to_grains ERROR: %s\n' % str(err))
+        return {'custom_grain_error': True}
+
+
+def get_asg_data(attempt=0):
+    """
+    This retrieves asg tag data for the instance e.g
+
+    """
+
+    md = get_aws_metadata()
+    ec2_tags = get_ec2_data()
+    stack_name = ec2_tags['aws:cloudformation:stack-name']
+
+    try:
+        conn = boto.ec2.autoscale.connect_to_region(md['aws_region'])
+        group = None
+        for grp in conn.get_all_groups():
+            for tag in grp.tags:
+                if tag.key == 'aws:cloudformation:stack-name':
+                    if str(tag.value) == str(stack_name):
+                        group = grp
+
+        tags = {}
+        for i in group.tags:
+            tags[str(i.key)] = str(i.value)
+
+        return tags
+    except BotoServerError:
+        if attempt > 5:
+            return {'custom_grain_error': True}
+        time.sleep(random.randint(1, 5))
+        attempt = attempt + 1
+        return get_asg_data(attempt)
+    except Exception as err:
+        sys.stderr.write('tags_to_grains ERROR: %s\n' % str(err))
+        return {'custom_grain_error': True}
+
+
+if __name__ == '__main__':
+    print get_ec2_data()
+    print get_cf_data()
+    print get_aws_metadata()
+    print get_asg_data()
