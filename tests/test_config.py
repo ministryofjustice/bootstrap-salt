@@ -6,6 +6,7 @@ import bootstrap_salt.config
 from bootstrap_salt.config import MyConfigParser
 
 from mock import patch
+from troposphere import awsencode
 
 from testfixtures import compare
 from troposphere import Template
@@ -16,6 +17,12 @@ class TestConfig(unittest.TestCase):
     def setUp(self):
         pass
 
+    def _resources_to_dict(self, resources):
+        return json.loads(json.dumps(
+            dict((r.title, r) for r in resources),
+            cls=awsencode)
+        )
+
     # http://mock.readthedocs.org/en/latest/patch.html#where-to-patch
     @patch('bootstrap_salt.config.ConfigParser.base_template')
     @patch.object(bootstrap_salt.config, 'env')
@@ -23,7 +30,92 @@ class TestConfig(unittest.TestCase):
         mock_super.return_value = Template()
         mock_env.kms_key_id = 'fake-key-id'
         x = MyConfigParser({}, 'my-stack').base_template()
-        compare(x.mappings['KMS'], {'salt': {'key': 'fake-key-id'}})
+        expected = {
+            "KMSPolicy": {
+                "Properties": {
+                    "PolicyDocument": {
+                        "Statement": [
+                            {
+                                "Action": [
+                                    "kms:Decrypt",
+                                    "kms:DescribeKey"
+                                ],
+                                "Effect": "Allow",
+                                "Resource": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "arn:aws:kms:",
+                                            {
+                                                "Ref": "AWS::Region"
+                                            },
+                                            ":",
+                                            {
+                                                "Ref": "AWS::AccountId"
+                                            },
+                                            ":key/",
+                                            "fake-key-id"
+                                        ]
+                                    ]
+                                },
+                                "Sid": "AllowUseOfTheKey"
+                            }
+                        ]
+                    },
+                    "PolicyName": "KMSPolicy",
+                    "Roles": [
+                        {
+                            "Ref": "BaseHostRole"
+                        }
+                    ]
+                },
+                "Type": "AWS::IAM::Policy"
+            },
+            "S3SaltPolicy": {
+                "Properties": {
+                    "PolicyDocument": {
+                        "Statement": [
+                            {
+                                "Action": [
+                                    "s3:Get*",
+                                    "s3:List*"
+                                ],
+                                "Effect": "Allow",
+                                "Resource": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "arn:aws:s3:::",
+                                            {
+                                                "Ref": "SaltBucket"
+                                            },
+                                            "/*"
+                                        ]
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    "PolicyName": "S3SaltPolicy",
+                    "Roles": [
+                        {
+                            "Ref": "BaseHostRole"
+                        }
+                    ]
+                },
+                "Type": "AWS::IAM::Policy"
+            },
+            "SaltBucket": {
+                "Properties": {
+                    "AccessControl": "BucketOwnerFullControl",
+                    "BucketName": "my-stack-salt"
+                },
+                "Type": "AWS::S3::Bucket"
+            }
+        }
+        resources = x.resources.values()
+        t_dict = self._resources_to_dict(resources)
+        compare(t_dict, expected)
 
     # http://mock.readthedocs.org/en/latest/patch.html#where-to-patch
     @patch('bootstrap_salt.config.ConfigParser.get_ec2_userdata')
