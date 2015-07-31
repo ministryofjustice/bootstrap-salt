@@ -1,6 +1,8 @@
+import json
 import tempfile
 import unittest
 import mock
+from mock import patch
 import yaml
 import boto.cloudformation
 import boto.ec2.autoscale
@@ -8,6 +10,7 @@ import paramiko
 from bootstrap_salt import cloudformation
 from bootstrap_salt import ec2
 from bootstrap_salt import ssh
+from bootstrap_salt import fab_tasks
 from paramiko.ssh_exception import AuthenticationException
 import socket
 import os
@@ -283,6 +286,53 @@ class BootstrapSaltTestCase(unittest.TestCase):
         mock_p.return_value = mock_client 
         paramiko.SSHClient = mock_p
         self.assertFalse(ssh.is_ssh_up('1.1.1.1'))
+
+    @patch('json.loads')
+    @patch('bootstrap_salt.fab_tasks.sudo')
+    @patch("bootstrap_salt.fab_tasks.find_master")
+    def test_check_formulas_exist(self,
+                                  mock_find_master,
+                                  mock_sudo,
+                                  mock_json_loads
+                                  ):
+        """
+        Test checking for admins when we have some in pillar
+        """
+        mock_find_master.return_value = "test-server"
+        mock_sudo.return_value = None
+        mock_json_loads.return_value = {
+            'local': {
+                'john': {},
+                'paul': {},
+                'george': {},
+                'ringo': {}
+            }
+        }
+        json.loads
+        success = fab_tasks.check_admins_exist()
+        msg = "test:test_check_formulas_exist: Did not return successfully"
+        self.assertTrue(success, msg)
+
+    @patch('json.loads')
+    @patch('bootstrap_salt.fab_tasks.sudo')
+    @patch("bootstrap_salt.fab_tasks.find_master")
+    def test_check_formulas_exist_no_admins(self,
+                                            mock_find_master,
+                                            mock_sudo,
+                                            mock_json_loads
+                                            ):
+        """
+        Test checking for admins when we have none in pillar
+        """
+        mock_find_master.return_value = "test-server"
+        mock_sudo.return_value = None
+        mock_json_loads.return_value = {
+            'local': {}
+        }
+        json.loads
+        success = fab_tasks.check_admins_exist()
+        msg = "test:test_check_formulas_exist: Did not return successfully"
+        self.assertFalse(success, msg)
 
     def tearDown(self):
         ssh.is_ssh_up = self.real_is_ssh_up
