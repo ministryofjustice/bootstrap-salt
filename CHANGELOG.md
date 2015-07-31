@@ -1,3 +1,7 @@
+## Version 1.0.0
+
+* Removing salt-master. This now bootstraps by uploading content to S3. This makes it possible for instances to pull content from S3 when they are created without interaction.
+
 ## Version 0.2.2
 
 * Make it possible to create multiple stacks with the same app and env.
