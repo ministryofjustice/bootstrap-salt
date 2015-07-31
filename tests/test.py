@@ -9,8 +9,10 @@ import boto.ec2.autoscale
 import paramiko
 from bootstrap_salt import cloudformation
 from bootstrap_salt import ec2
+from bootstrap_salt import fab_tasks
 from bootstrap_salt import ssh
 from paramiko.ssh_exception import AuthenticationException
+import io
 import socket
 import os
 
@@ -254,20 +256,46 @@ class BootstrapSaltTestCase(unittest.TestCase):
     def test_is_ssh_up(self):
         mock_p = mock.Mock()
         mock_client = mock.Mock()
-        mock_config = {'connect.side_effect':AuthenticationException}
+        mock_config = {'connect.side_effect': AuthenticationException}
         mock_client.configure_mock(**mock_config)
-        mock_p.return_value = mock_client 
+        mock_p.return_value = mock_client
         paramiko.SSHClient = mock_p
         self.assertTrue(ssh.is_ssh_up('1.1.1.1'))
 
     def test_is_ssh_not_up(self):
         mock_p = mock.Mock()
         mock_client = mock.Mock()
-        mock_config = {'connect.side_effect':socket.error}
+        mock_config = {'connect.side_effect': socket.error}
         mock_client.configure_mock(**mock_config)
-        mock_p.return_value = mock_client 
+        mock_p.return_value = mock_client
         paramiko.SSHClient = mock_p
         self.assertFalse(ssh.is_ssh_up('1.1.1.1'))
+
+    @patch('bootstrap_salt.fab_tasks.sudo')
+    @patch("bootstrap_salt.fab_tasks.find_master")
+    @patch('__builtin__.open')
+    @patch('os.path.isfile')
+    def test_set_formulas_grain(self,
+                                mock_isfile,
+                                mock_open,
+                                mock_find_master,
+                                mock_sudo
+                                ):
+        mock_isfile.return_value = True
+        mock_find_master.return_value = "test-server"
+        mock_sudo.return_value = None
+        text_file_data = '\n'.join(["test_organisation/test1-formula.git==v1.0.1",
+                                    "git@github.com:ministryofjustice/ntp-formula.git==v1.1.4",
+                                    "test_organisation/test3-formula.git==v3.0.1"])
+        fake_file = io.StringIO(u"%s" % text_file_data)
+        with mock.patch('bootstrap_salt.fab_tasks.open', return_value=fake_file, create=True):
+            fab_tasks.set_formulas_grain()
+            expected_call_string = ('/usr/bin/salt \\* grains.setval \'salt-formulas\' '
+                                    '\'{"test_organisation/test1-formula.git": "v1.0.1", '
+                                    '"test_organisation/test3-formula.git": "v3.0.1", '
+                                    '"git@github.com:ministryofjustice/ntp-formula.git": "v1.1.4"}\''
+                                    )
+            mock_sudo.assert_called_once_with(expected_call_string, shell=False)
 
     def tearDown(self):
         ssh.is_ssh_up = self.real_is_ssh_up
