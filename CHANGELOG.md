@@ -1,3 +1,7 @@
+## Version 1.0.1
+
+* Fix installing contrib files to correct path.
+
 ## Version 1.0.0
 
 * Removing salt-master. This now bootstraps by uploading content to S3. This makes it possible for instances to pull content from S3 when they are created without interaction.

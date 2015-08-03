@@ -7,7 +7,7 @@ pip install boto
 pip install gnupg
 cd /tmp
 git clone --depth 1 --branch $REVISION https://github.com/ministryofjustice/bootstrap-salt.git
-cd ./bootstrap-salt
+cd ./bootstrap-salt/bootstrap_salt
 cp -Lrf ./contrib/* /
 /tmp/bootstrap-salt.sh git v2014.7.5
 salt-call saltutil.sync_all

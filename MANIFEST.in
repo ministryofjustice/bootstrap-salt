@@ -1,1 +1,1 @@
-include contrib/*
+recursive-include bootstrap_salt/contrib *

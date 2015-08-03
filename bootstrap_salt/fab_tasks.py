@@ -254,13 +254,13 @@ def upload_salt():
     remote_pillar_dir = salt_cfg.get('remote_pillar_dir', '/srv/pillar')
 
     vendor_root = os.path.join(local_vendor_dir, '_root', '.')
-    bs_path = os.path.dirname(pkgutil.get_loader('bootstrap_salt').filename)
+    bs_path = pkgutil.get_loader('bootstrap_salt').filename
     dirs = {local_salt_dir: [remote_state_dir],
             local_pillar_dir: [remote_pillar_dir],
             vendor_root: [remote_state_dir, '/srv/formula-repos'],
             '{0}/contrib/srv/salt/_grains'.format(bs_path): [remote_state_dir],
             '{0}/contrib/etc/salt'.format(bs_path): ['/etc'],
-            '{0}/bootstrap_salt/salt_utils.py'.format(bs_path):
+            '{0}/salt_utils.py'.format(bs_path):
             ['/usr/local/bin/']
             }
     tmp_folder = tempfile.mkdtemp()

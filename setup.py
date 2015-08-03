@@ -11,6 +11,7 @@ setup(
     author_email='tools@digital.justice.gov.uk',
     description='MOJDS salt bootstrap tool',
     long_description="",
+    include_package_data=True,
     packages=find_packages(exclude=["tests"]),
     zip_safe=False,
     platforms='any',

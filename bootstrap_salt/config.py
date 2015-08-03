@@ -75,7 +75,7 @@ class MyConfigParser(ConfigParser):
         self.__version__ = pkg_resources.get_distribution("bootstrap_salt").version
         ret = super(MyConfigParser, self).get_ec2_userdata()
 
-        bs_path = os.path.dirname(pkgutil.get_loader('bootstrap_salt').filename)
+        bs_path = pkgutil.get_loader('bootstrap_salt').filename
         script = os.path.join(bs_path, './contrib/bootstrap.sh')
         files = {'write_files': [{'encoding': 'b64',
                                   'content': self.kms_data_key,
