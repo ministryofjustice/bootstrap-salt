@@ -1,3 +1,7 @@
+## Version 1.0.2
+
+* Fix running individual states with salt_util
+
 ## Version 1.0.1
 
 * Fix installing contrib files to correct path.
