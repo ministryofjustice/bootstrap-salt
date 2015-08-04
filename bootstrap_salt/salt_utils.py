@@ -113,4 +113,4 @@ if __name__ == "__main__":
     if args.state == "highstate":
         highstate()
     else:
-        state(args.target, args.state)
+        state(args.state)
