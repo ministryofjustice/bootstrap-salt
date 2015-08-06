@@ -3,6 +3,7 @@
 from functools import wraps
 import math
 import os
+from pipes import quote
 import sys
 import yaml
 import tempfile
@@ -216,6 +217,20 @@ def get_connection(klass):
     """
     _validate_fabric_env()
     return klass(env.aws, env.aws_region)
+
+@task
+def delete_tar():
+    """
+    Remove the encrypted salt tree from the s3 bucket.
+
+    This needs to be called before invoking cfn_delete otherwise the S3 bucket
+    will fail to be deleted. This will only delete the one file the
+    ``upload_salt`` task creates so if any other files are placed in there then
+    this task will still fail.
+    """
+    _validate_fabric_env()
+    stack_name = get_stack_name()
+    local("aws s3 --profile {0} rm s3://{1}-salt/srv.tar.gpg".format(quote(env.aws), quote(stack_name)))
 
 
 @task
