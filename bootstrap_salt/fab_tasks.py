@@ -14,10 +14,10 @@ import base64
 logging.basicConfig(level=logging.INFO)
 
 import bootstrap_cfn.config as config
-from fabric.api import env, task, local, get
+from fabric.api import env, task, local, get, settings
 from fabric.contrib import files
 from bootstrap_cfn.fab_tasks import _validate_fabric_env, \
-    get_stack_name, get_config, cfn_create
+    get_stack_name, get_config, cfn_create, cfn_delete
 
 from ec2 import EC2
 from bootstrap_salt.kms import KMS
@@ -132,7 +132,7 @@ def create_kms_data_key():
     kms = get_connection(KMS)
     return kms.generate_data_key(get_kms_key_id())
 
-bcfn_create = cfn_create
+bcfn_create, bcfn_delete = cfn_create, cfn_delete
 
 
 @task
@@ -145,6 +145,14 @@ def cfn_create(*args, **kwargs):
     env.kms_key_id = get_kms_key_id()
     env.kms_data_key = create_kms_data_key()
     bcfn_create(*args, **kwargs)
+
+
+@task
+@wraps(bcfn_delete)
+def cfn_delete(*args, **kwargs):
+    pre_delete_callbacks = kwargs.pop('pre_delete_callbacks', [])
+    pre_delete_callbacks.append(delete_tar)
+    bcfn_delete(*args, pre_delete_callbacks=pre_delete_callbacks, **kwargs)
 
 
 def get_instance_ips():
@@ -218,8 +226,10 @@ def get_connection(klass):
     _validate_fabric_env()
     return klass(env.aws, env.aws_region)
 
-@task
-def delete_tar():
+
+# This is the fab task. It can be called as stand alone from ``fab salt.delete_tar``
+@task(name='delete_tar')
+def delete_tar_task():
     """
     Remove the encrypted salt tree from the s3 bucket.
 
@@ -230,7 +240,13 @@ def delete_tar():
     """
     _validate_fabric_env()
     stack_name = get_stack_name()
-    local("aws s3 --profile {0} rm s3://{1}-salt/srv.tar.gpg".format(quote(env.aws), quote(stack_name)))
+    delete_tar(stack_name=stack_name)
+
+
+# This is passed as a callback fn to cfn_delete that respects it's confirmation behaviour.
+def delete_tar(stack_name, **kwargs):
+    with settings(warn_only=True):
+        local("aws s3 --profile {0} rm s3://{1}-salt/srv.tar.gpg".format(quote(env.aws), quote(stack_name)))
 
 
 @task
@@ -284,14 +300,14 @@ def upload_salt():
     for local_dir, dest_dirs in dirs.items():
         for dest_dir in dest_dirs:
             dest = os.path.join(tmp_folder, ".{0}".format(dest_dir))
-            local("mkdir -p {0}".format(dest))
-            local("cp -r {0} {1}".format(local_dir, dest))
+            local("mkdir -p {0}".format(quote(dest)))
+            local("cp -r {0} {1}".format(local_dir, quote(dest)))
     cfg_path = os.path.join(tmp_folder, "./{0}".format(remote_pillar_dir))
     with open(os.path.join(cfg_path, 'cloudformation.sls'), 'w') as cfg_file:
         yaml.dump(cfg, cfg_file)
     local("chmod -R 755 {0}".format(tmp_folder))
-    local("chmod -R 700 {0}{1}".format(tmp_folder, remote_state_dir))
-    local("chmod -R 700 {0}{1}".format(tmp_folder, remote_pillar_dir))
+    local("chmod -R 700 {0}{1}".format(tmp_folder, quote(remote_state_dir)))
+    local("chmod -R 700 {0}{1}".format(tmp_folder, quote(remote_pillar_dir)))
     local("tar -czvf ./srv.tar -C {0} .".format(tmp_folder))
     local("rm -rf {0}".format(tmp_folder))
 
@@ -304,8 +320,7 @@ def upload_salt():
     local("rm ./salt.key.enc")
 
     local("rm -rf ./srv.tar")
-    local("aws s3 --profile {0} cp ./srv.tar.gpg s3://{1}-salt/".format(env.aws,
-          stack_name))
+    local("aws s3 --profile {0} cp ./srv.tar.gpg s3://{1}-salt/".format(quote(env.aws), quote(stack_name)))
     local("rm -rf ./srv.tar.gpg")
 
 
