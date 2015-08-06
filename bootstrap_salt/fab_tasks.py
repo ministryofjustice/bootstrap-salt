@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from functools import wraps
 import math
 import os
 import sys
@@ -134,14 +135,15 @@ bcfn_create = cfn_create
 
 
 @task
-def cfn_create(test=False):
+@wraps(bcfn_create)
+def cfn_create(*args, **kwargs):
     """
     Here we override the cfn_create task from bootstrap_cfn so that we
     can inject the KMS key ID and encrypted key into the fabric environment.
     """
     env.kms_key_id = get_kms_key_id()
     env.kms_data_key = create_kms_data_key()
-    bcfn_create(test=test)
+    bcfn_create(*args, **kwargs)
 
 
 def get_instance_ips():
