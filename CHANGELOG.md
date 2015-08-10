@@ -1,3 +1,9 @@
+## Version 1.1.0
+
+* Provide a wrapped `cfn_delete` task that will remove the managed
+  salt.tar.gpg so that when we make the DeleteStack API call it doesn't error
+  saying the bucket is not empty.
+
 ## Version 1.0.2
 
 * Fix running individual states with salt_util
