@@ -4,6 +4,8 @@ from functools import wraps
 import math
 import os
 from pipes import quote
+import shutil
+import StringIO
 import sys
 import yaml
 import tempfile
@@ -272,69 +274,87 @@ def upload_salt():
     local_salt_dir = os.path.join(
         work_dir,
         salt_cfg.get('local_salt_dir', 'salt'),
-        '.')
+        )
     local_pillar_dir = os.path.join(
         work_dir,
         salt_cfg.get('local_pillar_dir', 'pillar'),
         env.environment,
-        '.')
+        )
     local_vendor_dir = os.path.join(
         work_dir,
         salt_cfg.get('local_vendor_dir', 'vendor'),
-        '.')
+        )
 
+    # TODO: This patth actuall appears in the minion conf which isn't
+    # templated, so die if this path is different (it's better to error
+    # explicitly than just not work.
     remote_state_dir = salt_cfg.get('remote_state_dir', '/srv/salt')
     remote_pillar_dir = salt_cfg.get('remote_pillar_dir', '/srv/pillar')
 
-    vendor_root = os.path.join(local_vendor_dir, '_root', '.')
+    vendor_root = os.path.join(local_vendor_dir, '_root')
     bs_path = pkgutil.get_loader('bootstrap_salt').filename
-    dirs = {local_salt_dir: [remote_state_dir],
-            local_pillar_dir: [remote_pillar_dir],
-            vendor_root: [remote_state_dir, '/srv/formula-repos'],
-            '{0}/contrib/srv/salt/_grains'.format(bs_path): [remote_state_dir],
-            '{0}/contrib/etc/salt'.format(bs_path): ['/etc'],
-            '{0}/salt_utils.py'.format(bs_path):
-            ['/usr/local/bin/']
+    dirs = {local_salt_dir: remote_state_dir,
+            local_pillar_dir: remote_pillar_dir,
+            vendor_root: '/srv/salt-formulas/',
+            '{0}/contrib/srv/salt/_grains'.format(bs_path): os.path.join(remote_state_dir, "_grains", ""),
+            '{0}/contrib/etc/'.format(bs_path): '/etc/',
+            '{0}/contrib/usr/'.format(bs_path): '/usr/',
             }
+
     tmp_folder = tempfile.mkdtemp()
-    for local_dir, dest_dirs in dirs.items():
-        for dest_dir in dest_dirs:
-            dest = os.path.join(tmp_folder, ".{0}".format(dest_dir))
-            local("mkdir -p {0}".format(quote(dest)))
-            local("cp -r {0} {1}".format(local_dir, quote(dest)))
+    for local_dir, dest_dir in dirs.items():
+        # Since dest dir will likely start with "/" (which would make join then
+        # ignore the tmp_folder we speciffy) make it start with "./" instead so
+        # it is contained
+        stage_path = os.path.join(tmp_folder, "." + dest_dir)
+
+        shutil.copytree(local_dir, stage_path, symlinks=False)
+
     cfg_path = os.path.join(tmp_folder, "./{0}".format(remote_pillar_dir))
     with open(os.path.join(cfg_path, 'cloudformation.sls'), 'w') as cfg_file:
         yaml.dump(cfg, cfg_file)
+
     local("chmod -R 755 {0}".format(tmp_folder))
     local("chmod -R 700 {0}{1}".format(tmp_folder, quote(remote_state_dir)))
     local("chmod -R 700 {0}{1}".format(tmp_folder, quote(remote_pillar_dir)))
-    local("tar -czvf ./srv.tar -C {0} .".format(tmp_folder))
-    local("rm -rf {0}".format(tmp_folder))
+
+    shutil.make_archive("srv",
+                        format="tar",
+                        root_dir=tmp_folder)
+    shutil.rmtree(tmp_folder)
 
     env.host_string = '{0}@{1}'.format(env.user, get_instance_ips()[0])
     # Here we get the encypted data key for this specific stack, we then use
     # KMS to get the plaintext key and use that key to encrypt the salt content
     # We get the key over SSH because it is unique to each stack.
-    get(remote_path='/etc/salt.key.enc', local_path='./', use_sudo=True)
-    encrypt_file('./srv.tar')
-    local("rm ./salt.key.enc")
 
-    local("rm -rf ./srv.tar")
+    key = StringIO.StringIO()
+
+    get(remote_path='/etc/salt.key.enc', local_path=key, use_sudo=True)
+    key.seek(0)
+    encrypt_file('./srv.tar', key_file=key)
+    key.close()
+
+    os.unlink("srv.tar")
     local("aws s3 --profile {0} cp ./srv.tar.gpg s3://{1}-salt/".format(quote(env.aws), quote(stack_name)))
-    local("rm -rf ./srv.tar.gpg")
+    os.unlink("srv.tar.gpg")
 
 
 @task
-def encrypt_file(file_name):
+def encrypt_file(file_name, key_file="./salt.key.enc"):
     """
     Encrypt a file using an encrypted KMS data key using GPG with an AES256
     cipher. Output file_name.gpg
 
     Args:
         file_name(string): path of file to encrypt
+        key_file(string): path to encrypted key. Contents will be read and
+            decrypted using KMS
     """
     kms = get_connection(KMS)
-    key = kms.decrypt(open('./salt.key.enc').read())['Plaintext']
+    if isinstance(key_file, basestring):
+        key_file = open(key_file)
+    key = kms.decrypt(key_file.read())['Plaintext']
     key = base64.b64encode(key)
     gpg = gnupg.GPG()
     gpg.encrypt(open(file_name), passphrase=key, encrypt=False, symmetric='AES256',
