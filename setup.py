@@ -20,7 +20,7 @@ setup(
         'Fabric>=1.10.1',
         'PyYAML>=3.11',
         'boto>=2.36.0',
-        'bootstrap-cfn>=0.5.1',
+        'bootstrap-cfn>=0.5.7',
         'requests',
         'ndg-httpsclient',
         'dnspython',

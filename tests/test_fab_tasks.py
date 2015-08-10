@@ -36,3 +36,14 @@ class TestFabTasks(unittest.TestCase):
 
     def tearDown(self):
         pass
+
+    @patch('bootstrap_salt.fab_tasks.bcfn_delete')
+    def test_cfn_delete_wrapper(self, mock_cfn_delete):
+        fab_tasks.cfn_delete()
+        mock_cfn_delete.assert_called_once_with(pre_delete_callbacks=[fab_tasks.delete_tar])
+
+    @patch('bootstrap_salt.fab_tasks.bcfn_delete')
+    def test_cfn_delete_wrapper_with_task(self, mock_cfn_delete):
+        x = lambda x: x
+        fab_tasks.cfn_delete(pre_delete_callbacks=[x])
+        mock_cfn_delete.assert_called_once_with(pre_delete_callbacks=[x, fab_tasks.delete_tar])
