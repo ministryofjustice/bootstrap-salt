@@ -1,3 +1,10 @@
+## Version 1.1.1
+
+* Change how we produce the "salt.tar" so that it is both simpler and platform
+  agnostic
+* Place a salt minion config file so that we look for files in /srv/salt and
+  /srv/salt-formulas
+
 ## Version 1.1.0
 
 * Provide a wrapped `cfn_delete` task that will remove the managed
