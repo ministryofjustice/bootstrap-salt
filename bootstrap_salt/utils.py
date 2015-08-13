@@ -1,10 +1,13 @@
+import errno
+import os
+import shutil
+import time
+
 import boto.exception
 import boto.provider
 import boto.sts
-import time
-import os
 
-import errors
+from bootstrap_salt import errors
 
 
 def timeout(timeout, interval):
@@ -48,5 +51,63 @@ def connect_to_aws(module, instance):
         return conn
     except boto.exception.NoAuthHandlerFound:
         raise errors.NoCredentialsError()
-    except boto.provider.ProfileNotFoundError as e:
+    except boto.provider.ProfileNotFoundError:
         raise errors.ProfileNotFoundError(instance.aws_profile_name)
+
+
+def copytree(src, dst, symlinks=False, ignore=None):
+    """
+    Behave exaclty like copytree from shutil standard library but don't
+    complain when the target directory already exists.
+
+    This version was taken from python 2.7.8_2 on OSX and the only changes are
+    the `try`/`except` around the `os.makedirs` call. Annoyingly copying the
+    function wholesale seems to be the only solution to this problem.
+    """
+
+    names = os.listdir(src)
+    if ignore is not None:
+        ignored_names = ignore(src, names)
+    else:
+        ignored_names = set()
+
+    try:
+        os.makedirs(dst)
+    except OSError, e:
+        # If the directory already eixsts then carry on.
+        if e.errno == errno.EEXIST:
+            pass
+        else:
+            raise
+
+    errors = []
+    for name in names:
+        if name in ignored_names:
+            continue
+        srcname = os.path.join(src, name)
+        dstname = os.path.join(dst, name)
+        try:
+            if symlinks and os.path.islink(srcname):
+                linkto = os.readlink(srcname)
+                os.symlink(linkto, dstname)
+            elif os.path.isdir(srcname):
+                copytree(srcname, dstname, symlinks, ignore)
+            else:
+                # Will raise a SpecialFileError for unsupported file types
+                shutil.copy2(srcname, dstname)
+        # catch the Error from the recursive copytree so that we can
+        # continue with other files
+        except shutil.Error, err:
+            errors.extend(err.args[0])
+        except EnvironmentError, why:
+            errors.append((srcname, dstname, str(why)))
+    try:
+        shutil.copystat(src, dst)
+    except OSError, why:
+        if WindowsError is not None and isinstance(why, WindowsError):
+            # Copying file access times may fail on Windows
+            pass
+        else:
+            errors.append((src, dst, str(why)))
+    if errors:
+        raise shutil.Error, errors

@@ -4,7 +4,6 @@ from functools import wraps
 import math
 import os
 from pipes import quote
-import shutil
 import StringIO
 import sys
 import yaml
@@ -308,7 +307,7 @@ def upload_salt():
         # it is contained
         stage_path = os.path.join(tmp_folder, "." + dest_dir)
 
-        shutil.copytree(local_dir, stage_path, symlinks=False)
+        utils.copytree(local_dir, stage_path, symlinks=False)
 
     cfg_path = os.path.join(tmp_folder, "./{0}".format(remote_pillar_dir))
     with open(os.path.join(cfg_path, 'cloudformation.sls'), 'w') as cfg_file:
