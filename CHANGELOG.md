@@ -1,4 +1,4 @@
-## Version 1.1.x
+## Version 1.1.2
 
 * Fix bug in `upload_salt` fab task that where you would get an OSError if you
   had created any files in your projects ./salt/_grain folder.
