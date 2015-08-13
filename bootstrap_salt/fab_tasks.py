@@ -12,6 +12,7 @@ import logging
 import pkgutil
 import gnupg
 import base64
+import shutil
 logging.basicConfig(level=logging.INFO)
 
 import bootstrap_cfn.config as config
