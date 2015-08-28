@@ -23,12 +23,30 @@ def get_aws_metadata():
         return {'custom_grain_error': True}
 
 
+_tags_to_grains_stack_name = 'NOT_FETCHED_YET'
+
+
+def get_stack_name():
+    global _tags_to_grains_stack_name
+    if _tags_to_grains_stack_name == 'NOT_FETCHED_YET':
+        # If we have problems *getting* the tags at all then retry/let the error bubble up
+        tags = get_ec2_data()
+
+        try:
+            _tags_to_grains_stack_name = tags['aws:cloudformation:stack-name']
+        except KeyError:
+            _tags_to_grains_stack_name = None
+    return _tags_to_grains_stack_name
+
+
 def get_cf_data(attempt=0):
     try:
+        stack_name = get_stack_name()
+        if stack_name is None:
+            return {}
+
         md = get_aws_metadata()
         conn = boto.cloudformation.connect_to_region(md['aws_region'])
-        tags = get_ec2_data()
-        stack_name = tags['aws:cloudformation:stack-name']
         stack_outputs = conn.describe_stacks(stack_name)[0].outputs
         out = {}
         [out.update({o.key: o.value}) for o in stack_outputs]
@@ -80,10 +98,13 @@ def get_asg_data(attempt=0):
     """
 
     md = get_aws_metadata()
-    ec2_tags = get_ec2_data()
-    stack_name = ec2_tags['aws:cloudformation:stack-name']
 
     try:
+        stack_name = get_stack_name()
+
+        if stack_name is None:
+            return {}
+
         conn = boto.ec2.autoscale.connect_to_region(md['aws_region'])
         group = None
         for grp in conn.get_all_groups():

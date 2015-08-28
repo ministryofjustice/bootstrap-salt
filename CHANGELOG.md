@@ -1,3 +1,8 @@
+## Unreleased
+
+* Let tags_to_grains script cope when not running on an instance created
+  outside cloudformation
+
 ## Version 1.1.2
 
 * Fix bug in `upload_salt` fab task that where you would get an OSError if you
