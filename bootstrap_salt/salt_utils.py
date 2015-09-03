@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import base64
-import logging
 import os
 import subprocess
 import sys
@@ -10,7 +9,6 @@ import salt.client
 import salt.config
 import salt.output
 import salt.runner
-logging.basicConfig(level=logging.ERROR)
 
 
 class BootstrapUtilError(Exception):
@@ -105,9 +103,15 @@ def check_state_result(result):
 
 if __name__ == "__main__":
     import argparse
+
+    from salt.log.setup import setup_console_logger, setup_logfile_logger
+
     parser = argparse.ArgumentParser(description='Run salt states')
     parser.add_argument('-s', dest='state', type=str,
                         help='Name of state or "highstate"', required=True)
+
+    setup_console_logger(log_level='info')
+    setup_logfile_logger(log_path='file:///var/log/salt/minion', log_level='debug')
 
     args = parser.parse_args()
     if args.state == "highstate":
