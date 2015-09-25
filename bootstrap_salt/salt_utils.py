@@ -111,7 +111,7 @@ if __name__ == "__main__":
                         help='Name of state or "highstate"', required=True)
 
     setup_console_logger(log_level='info')
-    setup_logfile_logger(log_path='file:///var/log/salt/minion', log_level='debug')
+    setup_logfile_logger(log_path='/var/log/salt/minion', log_level='debug')
 
     args = parser.parse_args()
     if args.state == "highstate":
