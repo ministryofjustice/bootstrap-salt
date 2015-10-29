@@ -87,7 +87,7 @@ class GithubTest(unittest.TestCase):
         responses_map = {
             'orgs': self.handle_orgs_request,
             'users': self.handle_users_request
-            }
+        }
         if path == '/':
             return {}
         return responses_map.get(path.split('/')[1])(path)

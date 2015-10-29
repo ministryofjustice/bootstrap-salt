@@ -108,7 +108,7 @@ def get_key_fingerprint(key):
     md5hash = hashlib.md5()
     md5hash.update(key_bytes)
     fingerprint = md5hash.hexdigest()
-    fingerprint = [fingerprint[i:i+2] for i in range(0, len(fingerprint), 2)]
+    fingerprint = [fingerprint[i: (i + 2)] for i in range(0, len(fingerprint), 2)]
     return ':'.join(fingerprint)
 
 

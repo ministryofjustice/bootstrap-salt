@@ -2,6 +2,7 @@
 
 * Let tags_to_grains script cope when not running on an instance created
   outside cloudformation
+Automatically remove default users
 
 ## Version 1.1.2
 
