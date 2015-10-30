@@ -1,8 +1,13 @@
-## Unreleased
+## 1.2.0
 
-* Let tags_to_grains script cope when not running on an instance created
+Features:
+* Automatically remove default users
+
+Fixes:
+* Fix log path in salt_utils script
+* Configure salt to log to stdout and it's normal log file
+* In tags_to_grains don't *require* a 'aws:cloudformation:stack-name' tag
   outside cloudformation
-Automatically remove default users
 
 ## Version 1.1.2
 
