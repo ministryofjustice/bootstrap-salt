@@ -1,3 +1,8 @@
+## 1.2.1
+
+Fixes:
+  * Fix KMS key retrieval
+
 ## 1.2.0
 
 Features:
