@@ -26,9 +26,32 @@ class KMS:
         self.conn_kms = utils.connect_to_aws(boto.kms, self)
 
     def get_key_id(self, alias):
-        aliases = self.conn_kms.list_aliases()['Aliases']
-        key_ids = [a['TargetKeyId'] for a in aliases if a['AliasName'] == "alias/{0}".format(alias)]
-        return key_ids[0] if len(key_ids) > 0 else None
+        """
+        Get a list of kms key_ids with the alias supplied
+
+        Args:
+            alias(string): The string identifier of the alias to
+                search for
+
+        Returns:
+            (string): Return the first matching key_id found, None type
+                if no key_ids were found
+        """
+        # Queries are paginated, while the results returned are truncated,
+        # and we dont have a key_id, keep getting pages
+        limit = 50
+        truncated = True
+        marker = None
+        while truncated:
+            alias_response = self.conn_kms.list_aliases(limit, marker)
+            key_ids = [a['TargetKeyId'] for a in alias_response['Aliases'] if a['AliasName'] == "alias/{0}".format(alias)]
+            if len(key_ids) > 0:
+                return key_ids[0]
+            # Move the query target to the next page
+            truncated = alias_response.get('Truncated', False)
+            marker = alias_response.get('NextMarker', None)
+
+        return None
 
     def create_key(self, alias):
         key_id = self.conn_kms.create_key()['KeyMetadata']['KeyId']
