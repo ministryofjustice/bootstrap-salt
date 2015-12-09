@@ -1,3 +1,9 @@
+## 1.2.2
+
+Fixes:
+   * get_all_groups() was paginated. Bump to max_records=100 until
+     issue is permanently addressed.
+
 ## 1.2.1
 
 Fixes:
