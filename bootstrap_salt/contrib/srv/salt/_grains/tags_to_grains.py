@@ -107,7 +107,7 @@ def get_asg_data(attempt=0):
 
         conn = boto.ec2.autoscale.connect_to_region(md['aws_region'])
         group = None
-        for grp in conn.get_all_groups():
+        for grp in conn.get_all_groups(max_records=100):
             for tag in grp.tags:
                 if tag.key == 'aws:cloudformation:stack-name':
                     if str(tag.value) == str(stack_name):
