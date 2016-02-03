@@ -62,6 +62,9 @@ def highstate():
     '''
     get_salt_data()
     caller = salt.client.Caller()
+    # synchronizes custom modules, states, beacons, grains, returners,
+    # output modules, renderers, and utils.
+    caller.function('saltutil.sync_all')
     res = caller.function('state.highstate')
     return check_state_result(res)
 
