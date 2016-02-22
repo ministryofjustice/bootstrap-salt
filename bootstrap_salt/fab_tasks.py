@@ -14,11 +14,11 @@ import pkgutil
 import gnupg
 import base64
 import shutil
-logging.basicConfig(level=logging.INFO)
 
 import bootstrap_cfn.config as config
 from fabric.api import env, task, local, get, settings, sudo
 from fabric.contrib import files
+from fabric.exceptions import NetworkError
 from bootstrap_cfn.fab_tasks import _validate_fabric_env, \
     get_stack_name, get_config, cfn_create, cfn_delete
 
@@ -28,6 +28,9 @@ import bootstrap_salt.utils as utils
 from bootstrap_salt.config import MyConfigParser
 
 from .deploy_lib import github
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
 
 # GLOBAL VARIABLES
 env.aws = None
@@ -44,6 +47,10 @@ env.stack = None
 # this allows us to inject extra userdata into the launch
 # config of the auto scaling groups
 env.cloudformation_parser = MyConfigParser
+
+# Set the default bootstrap.sh location
+env.bootstrap_script_path = '/usr/local/bin'
+env.bootstrap_tmp_path = '/tmp'
 
 
 @task
@@ -191,15 +198,15 @@ def wait_for_minions(timeout=600, interval=20):
 
     Args:
         timeout(int): time to wait for bootstrap to finish
-        interval(int): time to wait inbetween checks
+        interval(int): time to wait in-between checks
     """
     _validate_fabric_env()
     stack_name = get_stack_name()
     ec2 = get_connection(EC2)
-    print "Waiting for SSH on all instances..."
+    logging.info("Waiting for SSH on all instances...")
     ec2.wait_for_ssh(stack_name)
     fab_hosts = get_instance_ips()
-    print "Waiting for bootstrap script to finish on all instances..."
+    logging.info("Waiting for bootstrap script to finish on all instances...")
     utils.timeout(timeout, interval)(is_bootstrap_done)(fab_hosts)
 
 
@@ -207,7 +214,9 @@ def is_bootstrap_done(hosts):
     """
     Loops through a list of IPs and checks for the prescence of
     /tmp/bootstrap_done to ensure that the launch config has finished
-    executing.
+    executing. The call will also try to handle the case where we lose
+    ssh during the wait, which can happen if another action triggers
+    a reboot.
 
     Args:
         hosts(list): A list of IPs to check
@@ -215,7 +224,23 @@ def is_bootstrap_done(hosts):
     ret = []
     for host in hosts:
         env.host_string = '{0}@{1}'.format(env.user, host)
-        ret.append(files.exists('/tmp/bootstrap_done'))
+        target_file = '{}/bootstrap_done'.format(env.bootstrap_tmp_path)
+        try:
+            file_exists = files.exists(target_file)
+            ret.append(file_exists)
+            if file_exists:
+                logging.info("Salt bootstrap file {} on host {}..."
+                             .format(target_file, host))
+            else:
+                logging.info("Salt bootstrap file {} not found on host {}..."
+                             .format(target_file, host))
+        except NetworkError:
+            logging.warning("Could not connect to host {}, attempting to recover connection..."
+                            .format(host))
+            # Catch a network error and try again
+            stack_name = get_stack_name()
+            ec2 = get_connection(EC2)
+            ec2.wait_for_ssh(stack_name)
     return all(ret)
 
 
