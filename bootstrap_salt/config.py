@@ -84,9 +84,9 @@ class MyConfigParser(ConfigParser):
                                   'permissions': '0600'},
                                  {'content': open(script).read(),
                                   'owner': 'root:root',
-                                  'path': '/tmp/bootstrap.sh',
+                                  'path': '{}/bootstrap.sh'.format(env.bootstrap_script_path),
                                   'permissions': '0700'}]}
-        commands = {'runcmd': ['/tmp/bootstrap.sh v{0}'.format(self.__version__)]}
+        commands = {'runcmd': ['{}/bootstrap.sh v{}'.format(env.bootstrap_script_path, self.__version__)]}
         ret.append({
             'content': yaml.dump(commands),
             'mime_type': 'text/cloud-config'
