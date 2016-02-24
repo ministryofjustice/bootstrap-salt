@@ -16,8 +16,9 @@ import base64
 import shutil
 
 import bootstrap_cfn.config as config
-from fabric.api import env, task, local, get, settings, sudo
+from fabric.api import env, execute, parallel, task, local, get, settings, sudo
 from fabric.contrib import files
+import fabric.decorators
 from fabric.exceptions import NetworkError
 from bootstrap_cfn.fab_tasks import _validate_fabric_env, \
     get_stack_name, get_config, cfn_create, cfn_delete
@@ -474,3 +475,36 @@ def check_admins_exist():
                       % (', '.join(admins_dict.keys()),
                          host_ip)))
     return True
+
+
+@task
+def upgrade_packages(packages, fraction=None, restart=False):
+    """
+    Upgrade the packages specified, optionally rebooting afterwards
+
+    Args:
+        packages(list): List of packages to update. These can be a simple list
+            or with package versions, for example
+            '["package1", "package2"]' - get the latest versions of package1 and package2
+            '["package1", {"package2", "1.2.3"}]' - get the latest versions of package1,
+                and version 1.2.3 of package2.
+        fraction(float): The decimal fraction of minions to deploy to None means
+            all in one batch
+        restart(bool): False to not reboot after installation, True to reboot the instance.
+    """
+    for batch in get_ips_batch(fraction):
+        rup = fabric.decorators.hosts(batch)(run_upgrade_packages)
+        execute(rup, packages, fraction, restart)
+
+
+@parallel
+def run_upgrade_packages(packages, fraction=None, restart=False):
+    state = "pkg.install refresh=True only_upgrade=True pkgs='{}'".format(packages)
+    if fraction:
+        sudo('/usr/bin/salt-call {}'.format(state), shell=False)
+        if restart:
+            sudo('/usr/bin/salt-call system.reboot', shell=False)
+    else:
+        sudo('/usr/bin/salt-call {}'.format(state), shell=False)
+        if restart:
+            sudo('/usr/bin/salt-call system.reboot', shell=False)
