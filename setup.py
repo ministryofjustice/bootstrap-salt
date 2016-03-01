@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='bootstrap_salt',
-    version='1.2.2',
+    version='1.3.0',
     url='http://github.com/ministryofjustice/bootstrap-salt/',
     license='LICENSE',
     author='MOJDS',

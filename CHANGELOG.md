@@ -1,3 +1,11 @@
+## v1.3.0
+
+Features:
+* Add upgrade packages task
+Fixes:
+* Sync salt files before run
+* Update bootstrap wait check
+
 ## 1.2.2
 
 Fixes:
