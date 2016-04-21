@@ -1,3 +1,6 @@
+redis.db: '0'
+redis.host: '127.0.0.1'
+redis.port: 6379
 file_client: local
 file_roots:
   base:
