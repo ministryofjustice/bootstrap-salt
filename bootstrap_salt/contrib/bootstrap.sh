@@ -12,4 +12,8 @@ cp -Lrf ./contrib/* /
 /tmp/bootstrap-salt.sh git v2014.7.5
 salt-call saltutil.sync_all
 /usr/local/bin/salt_utils.py -s highstate
+export REDIS_HOST="localhost"
+export REDIS_PORT=16379
+export REDIS_DB=0
+/usr/local/bin/ssh_user_check.py
 touch /tmp/bootstrap_done
