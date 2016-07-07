@@ -21,7 +21,7 @@ from fabric.contrib import files
 import fabric.decorators
 from fabric.exceptions import NetworkError
 from bootstrap_cfn.fab_tasks import _validate_fabric_env, \
-    get_stack_name, get_config, cfn_create, cfn_delete
+    get_stack_name, get_basic_config, cfn_create, cfn_delete
 
 from ec2 import EC2
 from bootstrap_salt.kms import KMS
@@ -409,13 +409,16 @@ def generate_ssh_key_pillar(force=False, strict=True):
     # strict: remove all users not found in github
     work_dir = os.path.dirname(env.real_fabfile)
 
-    config = get_config()
-    salt_cfg = config.data.get('salt', {})
+    # ssh key lookup only needs the basic configuration data in
+    # the local config.
+    basic_config = get_basic_config()
+    salt_cfg = basic_config.get('salt', {})
+    key_config = basic_config.get('github_users', {})
 
     local_pillar_dir = os.path.join(
         work_dir, salt_cfg.get('local_pillar_dir', 'pillar'))
     pillar_file = os.path.join(local_pillar_dir, env.environment, 'keys.sls')
-    key_config = config.data.get('github_users', {})
+
     ssh_key_data = github.get_keys(key_config)
 
     if os.path.exists(pillar_file) and not force:
