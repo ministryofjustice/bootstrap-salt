@@ -1,3 +1,8 @@
+## v1.3.1
+
+Fixes:
+* Make the SSH keys update only use basic config data
+
 ## v1.3.0
 
 Features:
