@@ -279,6 +279,19 @@ def delete_tar(stack_name, **kwargs):
 
 
 @task
+def vendor_formulas():
+    """
+    Install the formula requirements using salt-shaker
+
+    Run salt-shaker to install all the requirements needed
+    by this deployment
+    """
+    from shaker.salt_shaker import Shaker
+    s = Shaker(root_dir=os.path.dirname(env.real_fabfile))
+    s.install_requirements()
+
+
+@task
 def upload_salt():
     """
     Get encrypted key from one of the stack hosts,
@@ -511,3 +524,13 @@ def run_upgrade_packages(packages, fraction=None, restart=False):
         sudo('/usr/bin/salt-call {}'.format(state), shell=False)
         if restart:
             sudo('/usr/bin/salt-call system.reboot', shell=False)
+
+
+@task
+def update_admins():
+    vendor_formulas()
+    upload_salt()
+    with settings(warn_only=True):
+        sudo('/usr/local/bin/salt_utils.py -s foo')
+    sudo('salt-call state.sls admins')
+    sudo('salt-call state.sls hardening.remove_users')
