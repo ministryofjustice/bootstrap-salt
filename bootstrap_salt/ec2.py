@@ -75,3 +75,16 @@ class EC2:
     def wait_for_ssh(self, stack_id, timeout=300, interval=30):
         return utils.timeout(timeout, interval)(
             self.is_ssh_up_on_all_instances)(stack_id)
+
+    def get_all_stack_ips(self):
+        instance_filter = {
+            'instance-state-name': 'running'
+        }
+        instances = self.conn_ec2.get_only_instances(filters=instance_filter,
+                                                     max_results=200)
+
+        required_tag = "aws:cloudformation:stack-name"
+        eligible = {i.ip_address: i.tags[required_tag]
+                    for i in instances if required_tag in i.tags}
+
+        return eligible

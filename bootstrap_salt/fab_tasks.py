@@ -16,7 +16,8 @@ import base64
 import shutil
 
 import bootstrap_cfn.config as config
-from fabric.api import env, execute, parallel, task, local, get, settings, sudo
+from fabric.api import env, execute, parallel, task, \
+    local, get, settings, sudo
 from fabric.contrib import files
 import fabric.decorators
 from fabric.exceptions import NetworkError
@@ -245,13 +246,16 @@ def is_bootstrap_done(hosts):
     return all(ret)
 
 
-def get_connection(klass):
+def get_connection(klass, optional=False):
     """
     Helper method to get connection to AWS
 
     Args:
         klass(class): The AWS class to setup the connection to.
     """
+    if optional and env.aws:
+        return klass(env.aws, env.aws_region)
+
     _validate_fabric_env()
     return klass(env.aws, env.aws_region)
 
@@ -368,7 +372,7 @@ def upload_salt():
 
 
 @task
-def encrypt_file(file_name, key_file="./salt.key.enc"):
+def encrypt_file(file_name, key_file="./salt.key.enc", kms_conn=None):
     """
     Encrypt a file using an encrypted KMS data key using GPG with an AES256
     cipher. Output file_name.gpg
@@ -378,7 +382,11 @@ def encrypt_file(file_name, key_file="./salt.key.enc"):
         key_file(string): path to encrypted key. Contents will be read and
             decrypted using KMS
     """
-    kms = get_connection(KMS)
+    if kms_conn is None:
+        kms = get_connection(KMS)
+    else:
+        kms = kms_conn
+
     if isinstance(key_file, basestring):
         key_file = open(key_file)
     key = kms.decrypt(key_file.read())['Plaintext']
@@ -511,3 +519,66 @@ def run_upgrade_packages(packages, fraction=None, restart=False):
         sudo('/usr/bin/salt-call {}'.format(state), shell=False)
         if restart:
             sudo('/usr/bin/salt-call system.reboot', shell=False)
+
+
+@task
+def update_users():
+    """
+    Setup a special fab environment to prepare for an all stack sync
+    user job.
+    """
+
+    try:
+        env.github_token = os.environ['GH_TOKEN']
+    except:
+        sys.exit("update_users requires a valid GH_TOKEN from github. Exiting...")
+
+    ec2_conn = get_connection(EC2, optional=True)
+    instances = ec2_conn.get_all_stack_ips()
+
+    # initialize lookup table
+    env.eght = dict()
+
+    if env.environment and env.application:
+        dec_func = fabric.decorators.hosts(get_instance_ips())(sync_users)
+    elif env.hosts:
+        dec_func = fabric.decorators.hosts(env.hosts)(sync_users)
+    else:
+        dec_func = fabric.decorators.hosts(instances.keys())(sync_users)
+
+    env.stack_names = instances
+    execute(dec_func)
+    local("rm /tmp/ght-*")
+
+
+@parallel(pool_size=2)
+def sync_users():
+    kms = get_connection(KMS, optional=True)
+
+    # Find stack id
+    stack = env.stack_names[env.host].split("-")
+    stack_name = "{0}-{1}".format(stack[0], stack[1])
+    filename = "/tmp/ght-{0}".format(stack_name)
+    s3_filename = "ght-{0}.gpg".format(env.stack_names[env.host])
+
+    if stack_name not in env.eght:
+        # Write token
+        fd = open(filename, "w")
+        fd.write(env.github_token)
+        fd.close()
+
+        # Encrypt out gh.token
+        key = StringIO.StringIO()
+        get(remote_path='/etc/salt.key.enc', local_path=key, use_sudo=True)
+        key.seek(0)
+        env.environment = stack[1]      # Setting the environment :(
+        encrypt_file(filename, key_file=key, kms_conn=kms)
+        key.close()
+        local("aws s3 --profile {0} cp {1}.gpg s3://{2}-salt/{3}".format(quote(env.aws),
+                                                                         quote(filename),
+                                                                         quote(env.stack_names[env.host]),
+                                                                         s3_filename))
+        env.eght[stack_name] = "env.stack_names[env.host].gpg"
+
+    sudo("salt-call saltutil.sync_modules")
+    sudo("salt-call github_user.addremove_users")
