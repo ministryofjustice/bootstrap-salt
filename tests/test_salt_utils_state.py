@@ -1,19 +1,25 @@
 import unittest
 import mock
 import sys
+
 # This is a hack so that we don't need salt to run our tests
 sys.modules['salt'] = mock.Mock()
 sys.modules['salt.runner'] = mock.Mock()
 sys.modules['salt.config'] = mock.Mock()
 sys.modules['salt.output'] = mock.Mock()
 sys.modules['salt.client'] = mock.Mock()
+sys.modules['salt.utils'] = mock.Mock()
+sys.modules['salt.log'] = mock.Mock()
+sys.modules['salt.log.setup'] = mock.Mock()
 import salt
-from bootstrap_salt import salt_utils
+
+from bootstrap_salt.salt_utils_state import SaltUtilsStateWrapper, SaltParserError, SaltStateError
 
 
-class SaltUtilTestCase(unittest.TestCase):
+class SaltUtilsStateTestCase(unittest.TestCase):
 
     def setUp(self):
+        self.salt_utils_state = SaltUtilsStateWrapper()
         pass
 
     def test_state_result(self):
@@ -28,26 +34,25 @@ class SaltUtilTestCase(unittest.TestCase):
         mock_caller = mock.Mock(Caller=mock_client)
 
         salt.client = mock_caller
-        salt_utils.get_salt_data = mock.Mock()
-        x = salt_utils.state('12345')
+        x = self.salt_utils_state.state('12345')
         self.assertTrue(x)
 
     def test_check_state_result_good(self):
         result = {'state': {'result': True},
                   'state1': {'result': True}}
-        x = salt_utils.check_state_result(result)
+        x = self.salt_utils_state.check_state_result(result)
         self.assertTrue(x)
 
     def test_check_state_result_bad(self):
         result = {'state': {'result': False},
                   'state1': {'result': True}}
-        with self.assertRaises(salt_utils.SaltStateError):
-            salt_utils.check_state_result(result)
+        with self.assertRaises(SaltStateError):
+            self.salt_utils_state.check_state_result(result)
 
     def test_check_state_result_parse_error(self):
         result = ['SOME SALT PARSER ERROR']
-        with self.assertRaises(salt_utils.SaltParserError):
-            salt_utils.check_state_result(result)
+        with self.assertRaises(SaltParserError):
+            self.salt_utils_state.check_state_result(result)
 
     def tearDown(self):
         pass
