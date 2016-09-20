@@ -24,7 +24,7 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger('boto').setLevel(logging.CRITICAL)
 
 
-class SaltUtilUpdateWrapper():
+class SaltUtilsUpdateWrapper():
     """
     Class to wrap the s3 downloading and data synchronising of salt
     data.

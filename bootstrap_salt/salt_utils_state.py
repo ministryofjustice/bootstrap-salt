@@ -20,10 +20,6 @@ logging.getLogger('boto').setLevel(logging.CRITICAL)
 class BootstrapUtilError(Exception):
     def __init__(self, msg):
         super(BootstrapUtilError, self).__init__(msg)
-        print >> (sys.stderr,
-                  "[ERROR] {0}: {1}"
-                  .format(self.__class__.__name__, msg))
-
 
 class SaltStateError(BootstrapUtilError):
     pass
@@ -33,7 +29,7 @@ class SaltParserError(BootstrapUtilError):
     pass
 
 
-class SaltUtilStateWrapper():
+class SaltUtilsStateWrapper():
     """
     Class to wrap the saltutil state caller. It provides some logging
     and error parsing.
