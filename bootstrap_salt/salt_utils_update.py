@@ -30,6 +30,8 @@ class SaltUtilsUpdateWrapper():
     data.
     """
     caller = None
+    kms_connection = None
+    s3_connection = None
 
     def __init__(self):
         self.caller = salt.client.Caller()
@@ -52,24 +54,20 @@ class SaltUtilsUpdateWrapper():
         ]
         region = self.caller.function('grains.item',
                                       'aws_region')['aws_region']
-        kms = boto.kms.connect_to_region(region)
-        s3 = boto.s3.connect_to_region(region)
+        self.kms_connection = boto.kms.connect_to_region(region)
+        self.s3_connection = boto.s3.connect_to_region(region)
 
         # If the s3 stored tar file exists, download it and decrypt
         bucket_name = '{0}-salt'.format(stack_name)
         logger.info("get_salt_data: Getting salt data from s3 bucket: {}"
                     .format(bucket_name))
-        tar_file = s3.get_bucket(bucket_name).get_key('srv.tar.gpg')
+        tar_file = self.s3_connection.get_bucket(bucket_name).get_key('srv.tar.gpg')
         if tar_file:
             logger.info("get_salt_data: Found tar file: {}"
                         .format(tar_file))
             tar_file.get_contents_to_filename('/srv.tar.gpg')
             os.chmod('/srv.tar.gpg', 0700)
-            key = kms.decrypt(open('/etc/salt.key.enc').read())['Plaintext']
-            key = base64.b64encode(key)
-            gpg = gnupg.GPG()
-            gpg.decrypt_file(open('/srv.tar.gpg'), passphrase=key,
-                             output='/srv.tar')
+            self.decrypt_salt_data()
             os.chmod('/srv.tar', 0700)
         # If this stack has not been highstated yet, no tar file will
         # be available
@@ -104,6 +102,25 @@ class SaltUtilsUpdateWrapper():
             tar.extractall(path=path)
         logger.info("untar: Tar file extracted")
 
+    def decrypt_salt_data(self,
+                          input_file='/srv.tar.gpg',
+                          output_file='/srv.tar',
+                          key_file='/etc/salt.key.enc'):
+        """
+        Decrypt the salt data
+
+        Args:
+            input_file(string): The path to the file containing the encrypted data
+            output_file(string): The path to the file to save the decrypted output to
+            key_file(string): The path to the file containing the key to use
+        """
+        key = self.kms_connection.decrypt(open(key_file).read())['Plaintext']
+        key = base64.b64encode(key)
+        gpg = gnupg.GPG()
+        gpg.decrypt_file(open(input_file),
+                         passphrase=key,
+                         output=output_file)
+
     def sync_remote_salt_data(self, clear_cache=True):
         """
         Synchronise the remote salt data.
@@ -124,6 +141,7 @@ class SaltUtilsUpdateWrapper():
         logger.info("sync_remote_salt_data: "
                     "Synchronised dynamic module data: {}"
                     .format(sync_result))
+        return sync_result
 
 
 if __name__ == "__main__":
