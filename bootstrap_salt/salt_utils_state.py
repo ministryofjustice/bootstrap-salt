@@ -122,5 +122,5 @@ if __name__ == "__main__":
     setup_logfile_logger(log_path='/var/log/salt/minion',
                          log_level=args.loglevel)
 
-    salt_util_state_wrapper = SaltUtilStateWrapper()
-    salt_util_state_wrapper.state(args.state)
+    salt_utils_state_wrapper = SaltUtilsStateWrapper()
+    salt_utils_state_wrapper.state(args.state)

@@ -156,5 +156,5 @@ if __name__ == "__main__":
     setup_logfile_logger(log_path='/var/log/salt/minion',
                          log_level=args.loglevel)
 
-    salt_util_update_wrapper = SaltUtilUpdateWrapper()
-    salt_util_update_wrapper.sync_remote_salt_data()
+    salt_utils_update_wrapper = SaltUtilsUpdateWrapper()
+    salt_utils_update_wrapper.sync_remote_salt_data()
