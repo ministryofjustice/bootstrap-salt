@@ -61,7 +61,7 @@ class SaltUtilsStateWrapper():
         if state == 'highstate':
             result = self.caller.function('state.highstate')
         else:
-            result = self.caller.function('state.highstate')(state)
+            result = self.caller.function('state.sls', state)
         logger.debug("state: State results: {}".format(result))
         return self.check_state_result(result)
 
