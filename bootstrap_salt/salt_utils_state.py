@@ -11,8 +11,8 @@ import salt.config
 import salt.output
 
 # Set up the logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger("bootstrap-salt::salt_utils")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("bootstrap-salt::salt_utils_state")
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger('boto').setLevel(logging.CRITICAL)
 

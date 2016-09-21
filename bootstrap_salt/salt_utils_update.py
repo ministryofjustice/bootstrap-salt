@@ -18,8 +18,8 @@ import salt.config
 import tarfile
 
 # Set up the logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger("bootstrap-salt::salt_utils")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("bootstrap-salt::salt_utils_update")
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger('boto').setLevel(logging.CRITICAL)
 
@@ -150,7 +150,7 @@ if __name__ == "__main__":
                         dest='loglevel',
                         type=str,
                         help='Level of logging detail',
-                        default="debug")
+                        default="info")
     args = parser.parse_args()
     setup_console_logger(log_level=args.loglevel)
     setup_logfile_logger(log_path='/var/log/salt/minion',
