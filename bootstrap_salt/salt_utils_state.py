@@ -62,7 +62,6 @@ class SaltUtilsStateWrapper():
             result = self.caller.function('state.highstate')
         else:
             result = self.caller.function('state.highstate')(state)
-
         logger.debug("state: State results: {}".format(result))
         return self.check_state_result(result)
 
@@ -93,7 +92,7 @@ class SaltUtilsStateWrapper():
                 raise SaltStateError('State did not execute successfully')
         elif isinstance(result, list):
                 for entry in result:
-                    if "failed" in entry:
+                    if "failed" in entry.lower() or "error" in entry.lower():
                         logging.critical("check_state_result: "
                                          "State failed, '{}'"
                                          .format(entry))
