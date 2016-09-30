@@ -19,5 +19,7 @@ else
   easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
   chmod 755 /usr/local/bootstrap-salt/scripts/ec2_tags.py
   chmod 750 /usr/local/bootstrap-salt/bootstrap_salt/salt_utils.py
+  chmod 750 /usr/local/bootstrap-salt/bootstrap_salt/salt_utils_update.py
+  chmod 750 /usr/local/bootstrap-salt/bootstrap_salt/salt_utils_state.py
   /usr/local/bootstrap-salt/scripts/ec2_tags.py
 fi
