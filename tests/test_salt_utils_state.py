@@ -21,8 +21,7 @@ class SaltUtilsStateTestCase(unittest.TestCase):
         """
         # Construct nested caller function
         instance = mock_salt_client_caller.return_value
-        instance.function.return_value = MagicMock()
-        instance.function.return_value.return_value = ['This call succeeded']
+        instance.function.return_value = ['This call succeeded']
 
         # Make actual call
         salt_utils_state = SaltUtilsStateWrapper()
@@ -43,8 +42,7 @@ class SaltUtilsStateTestCase(unittest.TestCase):
         """
         # Construct nested caller function
         instance = mock_salt_client_caller.return_value
-        instance.function.return_value = MagicMock()
-        instance.function.return_value.return_value = ['This call failed']
+        instance.function.return_value = ['This call failed']
 
         # Make actual call
         salt_utils_state = SaltUtilsStateWrapper()
@@ -62,8 +60,7 @@ class SaltUtilsStateTestCase(unittest.TestCase):
         """
         # Construct nested caller function
         instance = mock_salt_client_caller.return_value
-        instance.function.return_value = MagicMock()
-        instance.function.return_value.return_value = {'state': {'result': True}}
+        instance.function.return_value = {'state': {'result': True}}
 
         # Make actual call
         salt_utils_state = SaltUtilsStateWrapper()
@@ -84,8 +81,7 @@ class SaltUtilsStateTestCase(unittest.TestCase):
         # Construct nested caller function
         # Construct nested caller function
         instance = mock_salt_client_caller.return_value
-        instance.function.return_value = MagicMock()
-        instance.function.return_value.return_value = {'state': {'result': False}}
+        instance.function.return_value = {'state': {'result': False}}
 
         # Make actual call
         salt_utils_state = SaltUtilsStateWrapper()
