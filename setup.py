@@ -30,6 +30,7 @@ setup(
     setup_requires=[
         'mock>=1.0.1',
         'testfixtures>=4.1.2',
+        'salt==2014.7.5',
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',
