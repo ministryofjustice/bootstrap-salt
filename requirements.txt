@@ -3,3 +3,4 @@ PyYAML==3.11
 boto==2.36.0
 mock==1.0.1
 dnspython
+python-slugify
