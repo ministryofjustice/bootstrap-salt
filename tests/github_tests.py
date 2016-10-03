@@ -15,8 +15,8 @@ class GithubTest(unittest.TestCase):
         github.get_paginated_content = content_mock
 
         self.orgs_document = [
-            {'slug': 'teamA', 'id': '123456'},
-            {'slug': 'teamB', 'id': '789012'},
+            {'slug': 'team-a', 'id': '123456'},
+            {'slug': 'team-b', 'id': '789012'},
         ]
 
         rsa_pub_key = '''ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAIEA5KtkJ1gcLKYa''' \
@@ -67,15 +67,17 @@ class GithubTest(unittest.TestCase):
     def handle_users_request(self, path):
         if path.split('/')[-1] == 'keys':
             user = path.split('/')[2]
-            if user == 'good_user':
+            if user == 'good-user':
                 return [self.public_keys['rsa']]
-            elif user == 'bad_user':
+            elif user == 'slug-user':
+                return [self.public_keys['rsa']]
+            elif user == 'bad-user':
                 raise github.GithubRequestException
-            elif user == 'good_invalid_keys':
+            elif user == 'good-invalid-keys':
                 return [self.public_keys['invalid']]
-            elif user == 'good_no_keys':
+            elif user == 'good-no-keys':
                 return []
-            elif user == 'good_all_keys':
+            elif user == 'good-all-keys':
                 return [self.public_keys['rsa'], self.public_keys['dsa']]
 
     def content_side_effect(self, *args, **kwargs):
@@ -93,16 +95,33 @@ class GithubTest(unittest.TestCase):
         return responses_map.get(path.split('/')[1])(path)
 
     def test_get_org_team(self):
+        """
+        Test getting team in an organisation
+        """
         # test existing team
-        x = github.get_org_team('teamA')
-        self.assertEquals(x['slug'], 'teamA')
+        x = github.get_org_team('team-a')
+        self.assertEquals(x['slug'], 'team-a')
+
+        # test non existing team
+        self.assertRaises(github.InvalidTeamException,
+                          github.get_org_team, 'nonexistingteam')
+
+    def test_get_org_team_translated_to_slug(self):
+        """
+        Test getting org team with slug translation
+        """
+        # test existing team
+        x = github.get_org_team('team_A')
+        self.assertEquals(x['slug'], 'team-a')
 
         # test non existing team
         self.assertRaises(github.InvalidTeamException,
                           github.get_org_team, 'nonexistingteam')
 
     def test_get_key_fingerprint(self):
-
+        """
+        Test getting a key fingerprint
+        """
         # test rsa fingerprint
         rsa_fingerprint = github.get_key_fingerprint(self.public_keys['rsa'])
         self.assertEquals(rsa_fingerprint,
@@ -124,23 +143,25 @@ class GithubTest(unittest.TestCase):
                           self.public_keys['not_a_key'])
 
     def test_get_user_keys(self):
-
+        """
+        Test getting user keys
+        """
         # existing user with key
-        self.assertEquals(github.get_user_keys('good_user'),
+        self.assertEquals(github.get_user_keys('good-user'),
                           [self.public_keys['rsa']])
 
         # non existing user
         self.assertRaises(github.GithubRequestException, github.get_user_keys,
-                          'bad_user')
+                          'bad-user')
 
         # existing user with no keys
-        self.assertEquals([], github.get_user_keys('good_no_keys'))
+        self.assertEquals([], github.get_user_keys('good-no-keys'))
 
         # existing user with multiple keys filtered by fingerprint
         self.assertEquals(
             [self.public_keys['rsa']],
             github.get_user_keys(
-                'good_all_keys',
+                'good-all-keys',
                 fingerprints=[self.public_keys['rsa']['fingerprint']]))
 
         # existing user with single key and multiple fingerprints
@@ -148,6 +169,18 @@ class GithubTest(unittest.TestCase):
         self.assertEquals(
             [self.public_keys['rsa']],
             github.get_user_keys(
-                'good_user',
+                'good-user',
                 fingerprints=[self.public_keys['rsa']['fingerprint'],
                               self.public_keys['rsa']['fingerprint']]))
+
+
+    def test_get_user_keys_translated_to_slug(self):
+        """
+        Test that user names are correctly translated to slugs
+        """
+        # existing user with key
+        self.assertEquals(github.get_user_keys('Slug_user'),
+                          [self.public_keys['rsa']])
+        # existing user with key
+        self.assertEquals(github.get_user_keys('Slug User'),
+                          [self.public_keys['rsa']])

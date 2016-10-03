@@ -1,11 +1,19 @@
 import base64
 import hashlib
+import logging
 import os
+from slugify import slugify
 import requests
 
 
+# Set up the logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("bootstrap-cfn::github")
+logging.getLogger("requests").setLevel(logging.WARNING)
+
+
 API_ENDPOINT = 'https://api.github.com/'
-ORG = 'ministryofjustice'
+DEFAULT_ORG_SLUG = 'ministryofjustice'
 
 
 class GithubTokenMissing(Exception):
@@ -25,12 +33,31 @@ class InvalidKey(Exception):
 
 
 def get_github_token():
+    """
+    Get the github token from the GH_TOKEN environment variable
+
+    Returns:
+        (string): String of the github auth token
+
+    Raises:
+         GithubTokenMissing: If no token env variable was found
+    """
     if 'GH_TOKEN' not in os.environ:
         raise GithubTokenMissing('GH_TOKEN has not been defined.')
     return os.environ['GH_TOKEN']
 
 
 def get_paginated_content(url, page=None, out=None, **kwargs):
+    """
+    Helper function to get information from the github API,
+    and handle any paging.
+
+    Args:
+        url(string): The API url endpoint to contact
+        page():
+        out():
+        kwargs(dictionary): Other API call parameters
+    """
     if 'auth' not in kwargs:
         kwargs['auth'] = (get_github_token(), 'x-oauth-basic')
 
@@ -54,38 +81,110 @@ def get_paginated_content(url, page=None, out=None, **kwargs):
         return out
 
 
-def get_teams(org=ORG):
-    url = '{}orgs/{}/teams'.format(API_ENDPOINT, org)
+def get_teams(org_slug=DEFAULT_ORG_SLUG):
+    """
+    Get the list of teams in an organisation from github
+
+    Args:
+        org_slug(string): The organisation name in slug format
+
+    Returns:
+        response(dict): Dictionary of the response from github
+    """
+    # Ensure that org name is in slug format
+    forced_org_slug = check_slug_format(org_slug)
+    url = '{}orgs/{}/teams'.format(API_ENDPOINT, forced_org_slug)
     response = get_paginated_content(url)
     return response
 
 
-def get_org_members(org=ORG):
-    url = '{}orgs/{}/members'.format(org)
+def get_org_members(org_slug=DEFAULT_ORG_SLUG):
+    """
+    Get a list of members in an organisation
+
+    Args:
+        org_slug(string): The organisation name in slug format
+
+    Returns:
+        response(dict): Dictionary of the response from github
+    """
+     # Ensure that org name is in slug format
+    forced_org_slug = check_slug_format(org_slug)
+
+    url = '{}orgs/{}/members'.format(forced_org_slug)
     return get_paginated_content(url)
 
 
-def get_org_team(team_slug, org=ORG):
-    teams = get_teams(org)
-    team = filter(lambda x: x['slug'] == team_slug, teams)
+def get_org_team(team_slug, org_slug=DEFAULT_ORG_SLUG):
+    """
+    Get team information in an organisation from github
+
+    Args:
+        team_slug(string): The team name in slug format
+        org_slug(string): The organisation name in slug format
+
+    Returns:
+        (dict): Dictionary of the response team information from github
+    """
+    # Ensure that org name is in slug format
+    forced_org_slug = check_slug_format(org_slug)
+    # Ensure that team name is in slug format
+    forced_team_slug = check_slug_format(team_slug)
+    teams = get_teams(forced_org_slug)
+    team = filter(lambda x: x['slug'] == forced_team_slug, teams)
     if len(team) == 0:
         raise InvalidTeamException(
-            'Team {} is not part of org {}'.format(team_slug, org))
+            'Team {} is not part of org {}'.format(forced_team_slug, forced_org_slug))
     else:
         return team[0]
 
 
-def get_team_members(team_slug, org=ORG):
+def get_team_members(team_slug, org_slug=DEFAULT_ORG_SLUG):
+    """
+    Get the names of the team members of a team in an
+    organisation.
+
+    Args:
+        team_slug(string): The team name in slug format
+        org_slug(string): The organisation name in slug format
+
+    Returns:
+        (dict): Dictionary of the response from github
+    """
+    # Ensure that team name is in slug format
+    forced_team_slug = check_slug_format(team_slug)
+    # Ensure that org name is in slug format
+    forced_org_slug = check_slug_format(org_slug)
+
     try:
-        team = get_org_team(team_slug, org)
+        team = get_org_team(forced_team_slug, forced_org_slug)
     except InvalidTeamException:
         return {}
     url = '{}teams/{}/members'.format(API_ENDPOINT, team['id'])
     return get_paginated_content(url)
 
 
-def check_org_membership(org, user):
-    url = '{}orgs/{}/members/{}'.format(API_ENDPOINT, org, user)
+def check_org_membership(org_slug, user_slug):
+    """
+    Check that a user is a member of an organisation
+
+    Args:
+        org_slug(string): The organisation name in slug format
+        user_slug(string): The user name in slug format
+
+    Returns:
+        (bool): True is user is a mamber of the organisation,
+            False otherwise.
+    """
+    # Ensure that team name is in slug format
+    forced_org_slug = check_slug_format(org_slug)
+    # Ensure that team name is in slug format
+    forced_user_slug = check_slug_format(user_slug)
+    url = ('{}orgs/{}/members/{}'
+           .format(API_ENDPOINT,
+                   forced_org_slug,
+                   forced_user_slug)
+           )
     r = requests.get(url, auth=(get_github_token(), 'x-oauth-basic'))
     if r.status_code == 204:
         return True
@@ -112,8 +211,24 @@ def get_key_fingerprint(key):
     return ':'.join(fingerprint)
 
 
-def get_user_keys(user, fingerprints=None):
-    keys = get_paginated_content('{}users/{}/keys'.format(API_ENDPOINT, user))
+def get_user_keys(user_slug, fingerprints=None):
+    """
+    Get a users keys from a user name in slug format
+
+    Args:
+        user_slug(string): The name of the user in slug format
+        fingerprints(list): List of key fingerprints to retrieve
+
+    Returns:
+        keys(list): List of keys
+    """
+    # Ensure that the user name is in slug format for indexing
+    forced_user_slug = check_slug_format(user_slug)
+
+    keys = get_paginated_content(
+        '{}users/{}/keys'
+        .format(API_ENDPOINT, forced_user_slug)
+    )
     if fingerprints:
         for key in keys:
             fingerprint = get_key_fingerprint(key)
@@ -178,40 +293,22 @@ def get_keys(data):
     return out
 
 
-if __name__ == '__main__':
-    data = {
-        'ministryofjustice': {
-            'individuals': [
-                {
-                    'koikonom': {
-                        'fingerprints':
-                            ['35:53:6f:27:fe:39:8b:d8:dd:87:19:f3:40:d2:84:6a'],
-                        'unix_username': 'kyriakos'
-                    }
-                }, {
-                    'ashb': {
-                        'fingerprints':
-                            ['0c:11:2b:78:ff:8d:5f:f0:dc:27:8e:e2:f8:2f:ab:25',
-                             'af:e0:6c:dc:bd:9b:bf:1d:9b:de:2d:de:12:6e:f2:8a',
-                             ]
-                    }
-                },
-                'mattmb'
-            ],
-            'teams': [
-                {
-                    'prison-visits-booking': [
-                        {
-                            'jasiek': {
-                                'unix_username': 'jan',
-                                'fingerprint': '00:11:22:33'
-                            }
-                        }
-                    ]
-                },
-                'civil-claims'
-            ]
-        }
-    }
-    # print yaml.dump(get_keys(data), default_flow_style=False)
-    print get_keys(data)
+def check_slug_format(str):
+    """
+    Helper function to ensure that a string is in 
+    a slugged format
+
+    Args:
+        str(string): The string to force into a slugged format
+
+    Return:
+        str_slug(string): The string in slug format
+    """
+    # Ensure that the string is in slug format
+    str_slug = slugify(str)
+    if (str_slug != str):
+        logger.warning(
+            "Translated string {} into slug {}"
+            .format(str, str_slug)
+        )
+    return str_slug
