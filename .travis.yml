@@ -3,7 +3,7 @@
 language: python
 
 install:
-  - pip install coveralls flake8
+  - pip install coveralls flake8 salt==2014.7.5
 
 python:
   - "2.7"
