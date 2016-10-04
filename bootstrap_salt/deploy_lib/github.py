@@ -47,38 +47,56 @@ def get_github_token():
     return os.environ['GH_TOKEN']
 
 
-def get_paginated_content(url, page=None, out=None, **kwargs):
+def get_paginated_content(url,
+                          page=None,
+                          out={},
+                          **kwargs):
     """
     Helper function to get information from the github API,
     and handle any paging.
 
     Args:
         url(string): The API url endpoint to contact
-        page():
-        out():
+        page(int): DEPRECATED: The page number of the
+            paginated requests to retrieve.
+        out(dict): Output dictionary to append results to.
         kwargs(dictionary): Other API call parameters
     """
+    per_page = 100
+
+    # Ensure we have a params entry in kwargs
+    if 'params' not in kwargs:
+        kwargs['param'] = {}
+
+    # if we have paging, update the url
+    if page is not None:
+        logger.warning("get_paginated_content: "
+                     "page value is deprecated, ignoring "
+                     " specified value '{}'..."
+                     .format(page))
     if 'auth' not in kwargs:
         kwargs['auth'] = (get_github_token(), 'x-oauth-basic')
 
-    if 'params' in kwargs:
-        kwargs['params'].update({'per_page': 100})
-    else:
-        kwargs['params'] = {'per_page': 100}
-    r = requests.get(url, **kwargs)
-    if r.status_code != 200:
+    kwargs['params'].update({'per_page': per_page})
+
+    # Do requests
+    result = requests.get(url, **kwargs)
+    if result.status_code != 200:
         raise GithubRequestException('GH API request failed with code: {}'
-                                     '\n{}'.format(r.status_code, r.text))
+                                     '\n{}'
+                                     .format(result.status_code,
+                                            result.text)
+                                     )
 
-    if not out:
-        out = r.json()
-    else:
-        out.extend(r.json())
+    out.extend(r.json())
 
-    if 'next' in r.links:
-        return get_paginated_content(r.links['next']['url'], out=out, **kwargs)
-    else:
-        return out
+    # Recursively append paged results to out dictionary
+    if 'next' in result.links:
+        out = get_paginated_content(
+                result.links['next']['url'],
+                out=out,
+                **kwargs)
+    return out
 
 
 def get_teams(org_slug=DEFAULT_ORG_SLUG):
