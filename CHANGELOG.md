@@ -1,3 +1,9 @@
+## v1.3.3
+
+Fixes:
+
+* Move test requirements in setup.py to correct section
+
 ## v1.3.2
 
 Fixes:
