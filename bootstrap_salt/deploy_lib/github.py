@@ -71,9 +71,9 @@ def get_paginated_content(url,
     # if we have paging, update the url
     if page is not None:
         logger.warning("get_paginated_content: "
-                     "page value is deprecated, ignoring "
-                     " specified value '{}'..."
-                     .format(page))
+                       "page value is deprecated, ignoring "
+                       " specified value '{}'..."
+                       .format(page))
     if 'auth' not in kwargs:
         kwargs['auth'] = (get_github_token(), 'x-oauth-basic')
 
@@ -85,17 +85,15 @@ def get_paginated_content(url,
         raise GithubRequestException('GH API request failed with code: {}'
                                      '\n{}'
                                      .format(result.status_code,
-                                            result.text)
-                                     )
+                                             result.text))
 
     out.extend(r.json())
 
     # Recursively append paged results to out dictionary
     if 'next' in result.links:
-        out = get_paginated_content(
-                result.links['next']['url'],
-                out=out,
-                **kwargs)
+        out = get_paginated_content(result.links['next']['url'],
+                                    out=out,
+                                    **kwargs)
     return out
 
 
@@ -126,7 +124,7 @@ def get_org_members(org_slug=DEFAULT_ORG_SLUG):
     Returns:
         response(dict): Dictionary of the response from github
     """
-     # Ensure that org name is in slug format
+    # Ensure that org name is in slug format
     forced_org_slug = check_slug_format(org_slug)
 
     url = '{}orgs/{}/members'.format(forced_org_slug)
@@ -151,8 +149,9 @@ def get_org_team(team_slug, org_slug=DEFAULT_ORG_SLUG):
     teams = get_teams(forced_org_slug)
     team = filter(lambda x: x['slug'] == forced_team_slug, teams)
     if len(team) == 0:
-        raise InvalidTeamException(
-            'Team {} is not part of org {}'.format(forced_team_slug, forced_org_slug))
+        raise InvalidTeamException('Team {} is not part of org {}'
+                                   .format(forced_team_slug,
+                                           forced_org_slug))
     else:
         return team[0]
 
@@ -225,7 +224,8 @@ def get_key_fingerprint(key):
     md5hash = hashlib.md5()
     md5hash.update(key_bytes)
     fingerprint = md5hash.hexdigest()
-    fingerprint = [fingerprint[i: (i + 2)] for i in range(0, len(fingerprint), 2)]
+    fingerprint = [fingerprint[i: (i + 2)]
+                   for i in range(0, len(fingerprint), 2)]
     return ':'.join(fingerprint)
 
 
@@ -313,7 +313,7 @@ def get_keys(data):
 
 def check_slug_format(str):
     """
-    Helper function to ensure that a string is in 
+    Helper function to ensure that a string is in
     a slugged format
 
     Args:
