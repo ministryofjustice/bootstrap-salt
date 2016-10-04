@@ -1,3 +1,11 @@
+## v1.3.2
+
+Fixes:
+Refactor salt_utils to synchronise remote data more reliably
+Fix test dependencies on salt
+Fixup ec2 userdata test
+Update users by invoking the github_user module
+
 ## v1.3.1
 
 Fixes:
