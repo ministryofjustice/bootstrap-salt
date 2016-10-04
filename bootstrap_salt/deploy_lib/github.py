@@ -87,7 +87,7 @@ def get_paginated_content(url,
                                      .format(result.status_code,
                                              result.text))
 
-    out.extend(r.json())
+    out.extend(result.json())
 
     # Recursively append paged results to out dictionary
     if 'next' in result.links:
@@ -202,8 +202,8 @@ def check_org_membership(org_slug, user_slug):
                    forced_org_slug,
                    forced_user_slug)
            )
-    r = requests.get(url, auth=(get_github_token(), 'x-oauth-basic'))
-    if r.status_code == 204:
+    result = requests.get(url, auth=(get_github_token(), 'x-oauth-basic'))
+    if result.status_code == 204:
         return True
     else:
         return False
