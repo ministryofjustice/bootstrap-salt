@@ -27,7 +27,7 @@ setup(
         'awscli',
         'gnupg'
     ],
-    setup_requires=[
+    tests_require=[
         'mock>=1.0.1',
         'testfixtures>=4.1.2',
         'salt==2014.7.5',
