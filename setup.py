@@ -25,7 +25,8 @@ setup(
         'ndg-httpsclient',
         'dnspython',
         'awscli',
-        'gnupg'
+        'gnupg',
+        'python-slugify'
     ],
     tests_require=[
         'mock>=1.0.1',
