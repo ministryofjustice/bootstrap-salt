@@ -144,6 +144,7 @@ def create_kms_data_key():
     kms = get_connection(KMS)
     return kms.generate_data_key(get_kms_key_id())
 
+
 bcfn_create, bcfn_delete = cfn_create, cfn_delete
 
 

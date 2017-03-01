@@ -321,5 +321,6 @@ class BootstrapSaltTestCase(unittest.TestCase):
     def tearDown(self):
         ssh.is_ssh_up = self.real_is_ssh_up
 
+
 if __name__ == '__main__':
     unittest.main()
