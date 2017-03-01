@@ -1,6 +1,5 @@
 import boto.cloudformation
 import boto.ec2
-from boto.ec2 import autoscale
 import utils
 
 
