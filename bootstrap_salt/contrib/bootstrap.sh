@@ -6,6 +6,7 @@ apt-get update && apt-get -y install python-pip git python-dev
 pip install boto
 pip install gnupg
 pip install --pre github3.py
+pip install -U urllib3==1.14
 cd /tmp
 git clone --depth 1 --branch $REVISION https://github.com/ministryofjustice/bootstrap-salt.git
 cd ./bootstrap-salt/bootstrap_salt
