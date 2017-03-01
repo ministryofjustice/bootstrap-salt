@@ -1,5 +1,5 @@
 import unittest
-from mock import MagicMock, patch
+from mock import patch
 from nose.tools import raises
 from bootstrap_salt.salt_utils_state import SaltUtilsStateWrapper, SaltParserError, SaltStateError
 
@@ -169,6 +169,7 @@ class SaltUtilsStateTestCase(unittest.TestCase):
 
     def tearDown(self):
         pass
+
 
 if __name__ == '__main__':
     unittest.main()
