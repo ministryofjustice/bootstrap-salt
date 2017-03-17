@@ -6,7 +6,6 @@ import bootstrap_salt.config
 from bootstrap_salt.config import MyConfigParser
 
 from mock import patch
-from troposphere import awsencode
 
 from testfixtures import compare
 from troposphere import Template
@@ -18,10 +17,10 @@ class TestConfig(unittest.TestCase):
         pass
 
     def _resources_to_dict(self, resources):
-        return json.loads(json.dumps(
-            dict((r.title, r) for r in resources),
-            cls=awsencode)
-        )
+        resources_dict = {}
+        for resource in resources:
+            resources_dict[resource.title] = resource.to_dict()
+        return json.loads(json.dumps(resources_dict))
 
     # http://mock.readthedocs.org/en/latest/patch.html#where-to-patch
     @patch('bootstrap_salt.config.ConfigParser.base_template')
