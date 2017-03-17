@@ -3,7 +3,6 @@ import argparse
 from salt.log.setup import setup_console_logger, setup_logfile_logger
 
 import logging
-import sys
 
 import salt
 import salt.client
@@ -20,6 +19,7 @@ logging.getLogger('boto').setLevel(logging.CRITICAL)
 class BootstrapUtilError(Exception):
     def __init__(self, msg):
         super(BootstrapUtilError, self).__init__(msg)
+
 
 class SaltStateError(BootstrapUtilError):
     pass
