@@ -1,3 +1,20 @@
+## v1.3.5
+
+Release version 1.3.5
+
+## v1.3.4
+
+Fixes:
+
+* Fix user data tests
+* flake8 fixes
+* Drop awsencode use in tests
+* Upgrade urllib3 during bootstrap salt
+* Consistently use result instead of r for response return
+* fix pre-existing misc pep8 errors
+* deprecate_paging_arg
+* Fix github slug name parsing
+
 ## v1.3.3
 
 Fixes:
