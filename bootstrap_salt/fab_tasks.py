@@ -156,7 +156,21 @@ def get_kms_data_key():
     XXX: maybe we could add data key rotation here, although this
     would break things before the next vendor_upload.
     """
-    env.host_string = '{0}@{1}'.format(env.user, get_instance_ips()[0])
+    try:
+        ips = get_instance_ips()
+    except:
+        ips = None
+
+    #
+    # If we don't currently have any instances just create a new key
+    #
+    # XXX: Other possible scenario is to fetch it from within the
+    # LaunchConfiguration
+    #
+    if not ips:
+        return create_kms_data_key()
+
+    env.host_string = '{0}@{1}'.format(env.user, ips[0])
     key = StringIO.StringIO()
     get(remote_path='/etc/salt.key.enc', local_path=key, use_sudo=True)
     key.seek(0)
