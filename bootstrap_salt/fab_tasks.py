@@ -22,7 +22,7 @@ from fabric.contrib import files
 import fabric.decorators
 from fabric.exceptions import NetworkError
 from bootstrap_cfn.fab_tasks import _validate_fabric_env, \
-    get_stack_name, get_basic_config, cfn_create, cfn_delete
+    get_stack_name, get_basic_config, cfn_create, cfn_delete, cfn_update
 
 from ec2 import EC2
 from bootstrap_salt.kms import KMS
@@ -145,7 +145,28 @@ def create_kms_data_key():
     return kms.generate_data_key(get_kms_key_id())
 
 
-bcfn_create, bcfn_delete = cfn_create, cfn_delete
+@task
+def get_kms_data_key():
+    """
+    Returns a decrypted version of the current data key.
+
+    The current data key is needed, when we need to reconstruct the
+    LaunchConfiguration for an existing stack.
+
+    XXX: maybe we could add data key rotation here, although this
+    would break things before the next vendor_upload.
+    """
+    env.host_string = '{0}@{1}'.format(env.user, get_instance_ips()[0])
+    key = StringIO.StringIO()
+    get(remote_path='/etc/salt.key.enc', local_path=key, use_sudo=True)
+    key.seek(0)
+
+    kms = get_connection(KMS)
+    key = kms.decrypt(key.read())
+    return
+
+
+bcfn_create, bcfn_delete, bcfn_update = cfn_create, cfn_delete, cfn_update
 
 
 @task
@@ -158,6 +179,18 @@ def cfn_create(*args, **kwargs):
     env.kms_key_id = get_kms_key_id()
     env.kms_data_key = create_kms_data_key()
     bcfn_create(*args, **kwargs)
+
+
+@task
+@wraps(bcfn_update)
+def cfn_update(*args, **kwargs):
+    """
+    Here we override the cfn_create task from bootstrap_cfn so that we
+    can inject the KMS key ID and encrypted key into the fabric environment.
+    """
+    env.kms_key_id = get_kms_key_id()
+    env.kms_data_key = get_kms_data_key()
+    bcfn_update(*args, **kwargs)
 
 
 @task
