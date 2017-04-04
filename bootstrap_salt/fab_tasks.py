@@ -160,10 +160,9 @@ def get_kms_data_key():
     key = StringIO.StringIO()
     get(remote_path='/etc/salt.key.enc', local_path=key, use_sudo=True)
     key.seek(0)
-
-    kms = get_connection(KMS)
-    key = kms.decrypt(key.read())
-    return
+    data = key.read()
+    data = base64.b64encode(data)
+    return data
 
 
 bcfn_create, bcfn_delete, bcfn_update = cfn_create, cfn_delete, cfn_update
