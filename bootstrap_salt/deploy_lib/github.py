@@ -66,7 +66,7 @@ def get_paginated_content(url,
 
     # Ensure we have a params entry in kwargs
     if 'params' not in kwargs:
-        kwargs['param'] = {}
+        kwargs['params'] = {}
 
     # if we have paging, update the url
     if page is not None:
