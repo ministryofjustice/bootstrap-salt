@@ -188,3 +188,45 @@ class GithubTest(unittest.TestCase):
         # existing user with key
         self.assertEquals(github.get_user_keys('Slug User'),
                           [self.public_keys['rsa']])
+
+
+class GithubPaginatedContentTest(unittest.TestCase):
+
+    def setUp(self):
+        self.get_patcher = mock.patch('bootstrap_salt.deploy_lib.github.requests.get')
+        self.get = self.get_patcher.start()
+
+    def tearDown(self):
+        self.get_patcher.stop()
+
+    def _set_github_response(self, **kwargs):
+        self.get.return_value = self._make_result(**kwargs)
+
+    def _make_result(self, status_code=200, links=None, json=None):
+        result = mock.Mock(name='Response')
+        result.status_code = status_code
+        result.links = links or {}
+        result.json.return_value = json or []
+
+        return result
+
+    def test_get_paginated_content(self):
+        with mock.patch.dict('os.environ', {'GH_TOKEN': 'a-token'}):
+            self._set_github_response(json=[{'some': 'value'}])
+
+            result = github.get_paginated_content('a-url')
+
+            self.assertEqual(result, [{'some': 'value'}])
+            self.get.assert_called_once_with(
+                'a-url',
+                auth=('a-token', 'x-oauth-basic'),
+                params={'per_page': 100})
+
+    def test_get_paginated_content_multiple_times(self):
+        with mock.patch.dict('os.environ', {'GH_TOKEN': 'a-token'}):
+            self._set_github_response(json=[{'some': 'value'}])
+
+            github.get_paginated_content('a-url')
+            result = github.get_paginated_content('a-url')
+
+            self.assertEqual(result, [{'some': 'value'}])

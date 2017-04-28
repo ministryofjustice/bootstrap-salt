@@ -49,7 +49,7 @@ def get_github_token():
 
 def get_paginated_content(url,
                           page=None,
-                          out={},
+                          out=None,
                           **kwargs):
     """
     Helper function to get information from the github API,
@@ -59,10 +59,14 @@ def get_paginated_content(url,
         url(string): The API url endpoint to contact
         page(int): DEPRECATED: The page number of the
             paginated requests to retrieve.
-        out(dict): Output dictionary to append results to.
+        out(list): Output list to append results to.
         kwargs(dictionary): Other API call parameters
     """
     per_page = 100
+
+    # Ensure out defaults to an empty list
+    if out is None:
+        out = []
 
     # Ensure we have a params entry in kwargs
     if 'params' not in kwargs:
@@ -105,7 +109,7 @@ def get_teams(org_slug=DEFAULT_ORG_SLUG):
         org_slug(string): The organisation name in slug format
 
     Returns:
-        response(dict): Dictionary of the response from github
+        response(list): List of teams from github
     """
     # Ensure that org name is in slug format
     forced_org_slug = check_slug_format(org_slug)
@@ -122,7 +126,7 @@ def get_org_members(org_slug=DEFAULT_ORG_SLUG):
         org_slug(string): The organisation name in slug format
 
     Returns:
-        response(dict): Dictionary of the response from github
+        response(list): List of organisation members from github
     """
     # Ensure that org name is in slug format
     forced_org_slug = check_slug_format(org_slug)
@@ -166,7 +170,7 @@ def get_team_members(team_slug, org_slug=DEFAULT_ORG_SLUG):
         org_slug(string): The organisation name in slug format
 
     Returns:
-        (dict): Dictionary of the response from github
+        (list): List of team members from github
     """
     # Ensure that team name is in slug format
     forced_team_slug = check_slug_format(team_slug)

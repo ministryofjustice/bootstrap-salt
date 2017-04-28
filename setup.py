@@ -29,9 +29,10 @@ setup(
         'python-slugify'
     ],
     tests_require=[
+        'nose',
         'mock>=1.0.1',
         'testfixtures>=4.1.2',
-        'salt==2014.7.5',
+        'salt==2015.5.11',
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',
