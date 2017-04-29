@@ -1,3 +1,11 @@
+## v1.3.6
+
+Fixes:
+
+* Fix output type in github.get_paginated_content
+* Fix `setup.py tests`
+* Fix typo on get_paginated_content
+
 ## v1.3.5
 
 Release version 1.3.5
