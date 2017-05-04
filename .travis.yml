@@ -4,6 +4,8 @@ language: python
 
 install:
   - pip install coveralls flake8 salt==2014.7.5
+  - python setup.py install
+  - pip install -U git+https://github.com/ministryofjustice/bootstrap-cfn.git@cfn_update-ec2
 
 python:
   - "2.7"
@@ -12,7 +14,6 @@ python:
 script:
   # Run the tests first, and if they pass look at for style guide problems.
   - coverage run --source=bootstrap_salt setup.py test
-
   # If we are a Pull request, check the changes introduced in it for pep8
   #
   # Or if we are just on a branch, work out what we've changed since we
