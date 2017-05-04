@@ -20,14 +20,14 @@ setup(
         'Fabric>=1.10.1',
         'PyYAML>=3.11',
         'boto>=2.36.0',
-        'bootstrap-cfn>=0.5.7',
+        'git+https://github.com/ministryofjustice/bootstrap-cfn.git@cfn_update-ec2',
         'requests',
         'ndg-httpsclient',
         'dnspython',
         'awscli',
         'gnupg',
-        'python-slugify>=1.2.4',
-        'nose'
+        'nose',
+        'python-slugify>=1.2.4'
     ],
     tests_require=[
         'mock>=1.0.1',
