@@ -26,7 +26,8 @@ setup(
         'dnspython',
         'awscli',
         'gnupg',
-        'python-slugify'
+        'python-slugify>=1.2.4',
+        'nose'
     ],
     tests_require=[
         'mock>=1.0.1',

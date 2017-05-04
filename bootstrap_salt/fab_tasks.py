@@ -198,11 +198,12 @@ def cfn_create(*args, **kwargs):
 @wraps(bcfn_update)
 def cfn_update(*args, **kwargs):
     """
-    Here we override the cfn_create task from bootstrap_cfn so that we
+    Here we override the cfn_update task from bootstrap_cfn so that we
     can inject the KMS key ID and encrypted key into the fabric environment.
     """
     env.kms_key_id = get_kms_key_id()
     env.kms_data_key = get_kms_data_key()
+
     bcfn_update(*args, **kwargs)
 
 
