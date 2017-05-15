@@ -5,7 +5,7 @@ language: python
 install:
   - pip install coveralls flake8 salt==2014.7.5
   - python setup.py install
-  - pip install -U git+https://github.com/ministryofjustice/bootstrap-cfn.git@cfn_update-ec2
+  - pip install -U git+https://github.com/ministryofjustice/bootstrap-cfn.git
 
 python:
   - "2.7"
@@ -28,4 +28,4 @@ script:
 
 after_success:
   coveralls
-  
+
