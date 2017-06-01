@@ -1,3 +1,12 @@
+## v1.4.0
+
+Features:
+
+* Introduce cfn_update to update EC2 and ELB yaml configuration.
+
+Note: This feature requires bootstrap-cfn >= v1.5.0
+
+
 ## v1.3.6
 
 Fixes:
