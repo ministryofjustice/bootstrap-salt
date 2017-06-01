@@ -11,3 +11,5 @@ gnupg
 nose
 ndg-httpsclient
 awscli
+datadiff
+pycrypto

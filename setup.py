@@ -28,7 +28,9 @@ setup(
         'gnupg',
         'nose',
         'python-slugify>=1.2.4',
-        'testfixtures>=4.1.2'
+        'testfixtures>=4.1.2',
+        'datadiff',
+        'pycrypto'
     ],
     tests_require=[
         'mock>=1.0.1',

@@ -4,8 +4,7 @@ language: python
 
 install:
   - pip install coveralls flake8 salt==2014.7.5
-  - python setup.py install
-  - pip install -U bootstrap-cfn==1.5.0 
+  - pip install -r requirements.txt
 
 python:
   - "2.7"
