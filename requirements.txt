@@ -3,4 +3,13 @@ PyYAML==3.11
 boto==2.36.0
 mock==1.0.1
 dnspython
-python-slugify
+python-slugify>=1.2.4
+testfixtures>=4.1.2
+bootstrap-cfn>=1.5.0
+requests
+gnupg
+nose
+ndg-httpsclient
+awscli
+datadiff
+pycrypto
