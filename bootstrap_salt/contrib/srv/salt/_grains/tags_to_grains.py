@@ -31,7 +31,6 @@ def get_stack_name():
     if _tags_to_grains_stack_name == 'NOT_FETCHED_YET':
         # If we have problems *getting* the tags at all then retry/let the error bubble up
         tags = get_ec2_data()
-
         try:
             _tags_to_grains_stack_name = tags['aws:cloudformation:stack-name']
         except KeyError:
@@ -93,21 +92,24 @@ def get_ec2_data(attempt=0):
 
 def get_asg_data(attempt=0):
     """
-    This retrieves asg tag data for the instance e.g
-
+    This retrieves asg tag data for the instance.
     """
 
     md = get_aws_metadata()
 
     try:
         stack_name = get_stack_name()
+        conn = boto.ec2.autoscale.connect_to_region(md['aws_region'])
+        instance = conn.get_all_autoscaling_instances(instance_ids=[md['aws_instance_id']])
 
-        if stack_name is None:
+        if not instance:
             return {}
 
-        conn = boto.ec2.autoscale.connect_to_region(md['aws_region'])
-        group = None
-        for grp in conn.get_all_groups(max_records=100):
+        if not instance[0].group_name:
+            return {}
+
+        group_name = instance[0].group_name
+        for grp in conn.get_all_groups(names=[group_name]):
             for tag in grp.tags:
                 if tag.key == 'aws:cloudformation:stack-name':
                     if str(tag.value) == str(stack_name):
