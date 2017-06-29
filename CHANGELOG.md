@@ -1,3 +1,7 @@
+## v2.0.0
+
+* Major version bump as cfn_update is a breaking change
+
 ## v1.4.1
 
 Fixes:
