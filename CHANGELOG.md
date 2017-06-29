@@ -1,3 +1,8 @@
+## v1.4.1
+
+Fixes:
+* tags_to_grains.py: isolate asg tags on each member instances
+
 ## v1.4.0
 
 Features:
