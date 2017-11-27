@@ -109,7 +109,8 @@ def get_asg_data(attempt=0):
             return {}
 
         group_name = instance[0].group_name
-        for grp in conn.get_all_groups(names=[group_name]):
+        tagged_groups = [grp for grp in conn.get_all_groups(max_records=100) if grp.tags is not None]
+        for grp in tagged_groups:
             for tag in grp.tags:
                 if tag.key == 'aws:cloudformation:stack-name':
                     if str(tag.value) == str(stack_name):
