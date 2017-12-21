@@ -126,7 +126,11 @@ def get_kms_key_id():
     application-environment. If no key exists it will create a
     new one.
     """
-    alias = "{0}-{1}".format(env.application, env.environment)
+    if env.environment in ("prod", "production"):
+        alias = "{0}-{1}".format(env.application, env.environment)
+    else:
+        alias = "{0}".format(env.application)
+
     kms = get_connection(KMS)
     key_id = kms.get_key_id(alias)
     if not key_id:
