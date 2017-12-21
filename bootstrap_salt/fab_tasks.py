@@ -17,7 +17,7 @@ import shutil
 
 import bootstrap_cfn.config as config
 from fabric.api import env, execute, parallel, task, \
-    local, get, settings, sudo
+    local, get, put, settings, sudo
 from fabric.contrib import files
 import fabric.decorators
 from fabric.exceptions import NetworkError
@@ -329,6 +329,60 @@ def delete_tar(stack_name, **kwargs):
     with settings(warn_only=True):
         local("aws s3 --profile {0} rm s3://{1}-salt/srv.tar.gpg".format(quote(env.aws), quote(stack_name)))
 
+@task
+def run_upload_ssh():
+    """
+    Upload keys.sls file from pillar/$env/keys.sls to
+    /srv/pillar/keys.sls on the server.
+    """
+    _validate_fabric_env()
+    stack_name = get_stack_name()
+    work_dir = os.path.dirname(env.real_fabfile)
+
+    project_config = config.ProjectConfig(env.config,
+                                          env.environment,
+                                          env.stack_passwords)
+    cfg = project_config.config
+    salt_cfg = cfg.get('salt', {})
+
+    remote_ssh_keys = os.path.join(
+        salt_cfg.get('remote_pillar_dir', '/srv/pillar'),
+        "keys.sls")
+
+    local_ssh_keys = os.path.join(
+        work_dir,
+        salt_cfg.get('local_pillar_dir', 'pillar'),
+        env.environment,
+        "keys.sls")
+
+    put(remote_path=remote_ssh_keys, local_path=local_ssh_keys, use_sudo=True)
+    sudo("chown root:root {0}".format(remote_ssh_keys))
+
+@task
+def upload_ssh():
+    for batch in get_ips_batch(None):
+        lol = fabric.decorators.hosts(batch)(run_upload_ssh)
+        execute(lol)
+
+@task
+def update_ssh():
+    upload_ssh()
+    remote_exec("salt-call state.sls admins")
+
+@task
+def remote_exec(cmd=None):
+    if cmd is None:
+        sys.exit(1)
+
+    for batch in get_ips_batch(None):
+        de = fabric.decorators.hosts(batch)(run_remote_exec)
+        execute(de, cmd)
+
+@parallel
+def run_remote_exec(cmd):
+    with settings(warn_only=True):
+        sudo("{}".format(cmd), shell=True)
+
 
 @task
 def upload_salt():
@@ -363,7 +417,7 @@ def upload_salt():
         work_dir,
         salt_cfg.get('local_vendor_dir', 'vendor'),
         )
-
+ 
     # TODO: This patth actuall appears in the minion conf which isn't
     # templated, so die if this path is different (it's better to error
     # explicitly than just not work.
