@@ -1,5 +1,5 @@
 Fabric==1.10.1
-PyYAML==3.11
+PyYAML==5.4
 boto==2.36.0
 mock==1.0.1
 dnspython
