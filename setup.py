@@ -36,7 +36,7 @@ setup(
         'nose',
         'mock>=1.0.1',
         'testfixtures>=4.1.2',
-        'salt==2015.5.11',
+        'salt==3003.5',
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',
